@@ -64,6 +64,20 @@ export default function LoginPage() {
     const fallbackRoute = role === "doctor" ? "/doctor/dashboard" : "/patient/dashboard";
     const destination = redirectTo ?? fallbackRoute;
 
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        await fetch("/auth/session", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session: sessionData.session }),
+        });
+      }
+    } catch (sessionError) {
+      console.error("[login] failed to sync session cookie", sessionError);
+    }
+
     setTimeout(() => {
       router.replace(destination);
     }, 200);

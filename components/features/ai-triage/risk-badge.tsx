@@ -4,26 +4,30 @@ export type RiskLevel = "low" | "moderate" | "high" | "emergency";
 
 const riskConfig: Record<
   RiskLevel,
-  { label: string; container: string; indicator: string }
+  {
+    label: string;
+    container: string;
+    indicator: string;
+  }
 > = {
   low: {
     label: "Risiko Rendah",
-    container: "bg-accent/10 text-accent border border-accent/20",
-    indicator: "bg-accent",
+    container: "border border-primary/20 bg-primary/5 text-primary",
+    indicator: "bg-primary",
   },
   moderate: {
     label: "Risiko Sedang",
-    container: "bg-warning/10 text-warning border border-warning/30",
+    container: "border border-warning/30 bg-warning/10 text-warning",
     indicator: "bg-warning",
   },
   high: {
     label: "Risiko Tinggi",
-    container: "bg-danger/10 text-danger border border-danger/30",
+    container: "border border-danger/20 bg-danger/15 text-danger",
     indicator: "bg-danger",
   },
   emergency: {
     label: "Darurat",
-    container: "bg-danger text-white border border-danger/40",
+    container: "border border-danger/40 bg-danger text-white shadow-[0_0_0_1px_rgba(255,255,255,0.35)]",
     indicator: "bg-white",
   },
 };
@@ -39,7 +43,7 @@ export function RiskBadge({ level, className }: RiskBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-badge px-3 py-1 text-tiny font-semibold uppercase tracking-wide",
+        "inline-flex items-center gap-2 rounded-badge px-3 py-1 text-[11px] font-semibold uppercase tracking-wide shadow-sm",
         config.container,
         className,
       )}
@@ -49,4 +53,3 @@ export function RiskBadge({ level, className }: RiskBadgeProps) {
     </span>
   );
 }
-

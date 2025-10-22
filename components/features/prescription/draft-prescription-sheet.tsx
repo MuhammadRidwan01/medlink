@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Pill, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +13,10 @@ import {
   type MedicationOption,
 } from "./medication-search";
 import { MedicationCard, type DraftMedication } from "./medication-card";
+import {
+  getCurrentProfileSnapshot,
+  subscribeToProfileSnapshot,
+} from "@/components/features/profile/store";
 
 type PatientSummary = {
   name: string;
@@ -78,6 +82,26 @@ export function DraftPrescriptionSheet({
   onSendForApproval,
   onCancel,
 }: DraftPrescriptionSheetProps) {
+  const [profileAllergies, setProfileAllergies] = useState<string[]>(patient.allergies);
+
+  useEffect(() => {
+    setProfileAllergies(patient.allergies);
+    try {
+      const snapshot = getCurrentProfileSnapshot();
+      if (snapshot.allAllergies.length) {
+        setProfileAllergies(snapshot.allAllergies.map((item) => item.substance));
+      }
+    } catch {
+      // ignore
+    }
+    const unsubscribe = subscribeToProfileSnapshot((detail) => {
+      setProfileAllergies(detail.allAllergies.map((item) => item.substance));
+    });
+    return unsubscribe;
+  }, [patient.allergies]);
+
+  const allergiesForDisplay = profileAllergies.length ? profileAllergies : patient.allergies;
+
   const interactionWarnings = useMemo(() => {
     const codes = medications.map((med) => med.sourceId);
     return INTERACTION_RULES.filter((rule) =>
@@ -170,8 +194,8 @@ export function DraftPrescriptionSheet({
                       Alergi
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {patient.allergies.length ? (
-                        patient.allergies.map((allergy) => (
+                      {allergiesForDisplay.length ? (
+                        allergiesForDisplay.map((allergy) => (
                           <span
                             key={allergy}
                             className="rounded-badge border border-warning/30 bg-warning/10 px-3 py-1 text-tiny font-semibold uppercase tracking-wide text-warning"

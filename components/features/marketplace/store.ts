@@ -1,8 +1,25 @@
+"use client";
+
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { MOCK_PRODUCTS, PATIENT_CONTEXT, type MarketplaceProduct, type MarketplaceCategory } from "./data";
+import {
+  MOCK_PRODUCTS,
+  PATIENT_CONTEXT,
+  type MarketplaceProduct,
+  type MarketplaceCategory,
+} from "./data";
+import {
+  getCurrentProfileSnapshot,
+  subscribeToProfileSnapshot,
+  type SnapshotEventDetail,
+} from "@/components/features/profile/store";
 
 export type SortOption = "relevance" | "price-asc" | "price-desc" | "rating";
+
+type PatientSnapshotStrings = {
+  allergies: string[];
+  medications: string[];
+};
 
 type MarketplaceState = {
   search: string;
@@ -12,6 +29,7 @@ type MarketplaceState = {
   categories: MarketplaceCategory[];
   tags: string[];
   visibleCount: number;
+  patientSnapshot: PatientSnapshotStrings;
   setSearch: (value: string) => void;
   setDebouncedSearch: (value: string) => void;
   setSort: (value: SortOption) => void;
@@ -20,10 +38,14 @@ type MarketplaceState = {
   toggleTag: (tag: string) => void;
   resetFilters: () => void;
   loadMore: () => void;
+  setPatientSnapshot: (snapshot: PatientSnapshotStrings) => void;
 };
 
 const DEFAULT_PRICE_RANGE: [number, number] = [0, 600000];
 const PAGE_SIZE = 8;
+
+const initialSnapshotDetail = getInitialProfileSnapshot();
+let patientConflictSet = createConflictSet(initialSnapshotDetail);
 
 export const useMarketplaceStore = create<MarketplaceState>()(
   devtools((set) => ({
@@ -34,6 +56,12 @@ export const useMarketplaceStore = create<MarketplaceState>()(
     categories: [],
     tags: [],
     visibleCount: PAGE_SIZE,
+    patientSnapshot: {
+      allergies: initialSnapshotDetail.allAllergies.map((a) => a.substance),
+      medications: initialSnapshotDetail.allMedications
+        .filter((med) => med.status === "active")
+        .map((med) => med.name),
+    },
     setSearch: (value) => set(() => ({ search: value })),
     setDebouncedSearch: (value) => set(() => ({ debouncedSearch: value, visibleCount: PAGE_SIZE })),
     setSort: (value) => set(() => ({ sort: value, visibleCount: PAGE_SIZE })),
@@ -66,7 +94,8 @@ export const useMarketplaceStore = create<MarketplaceState>()(
       set((state) => ({
         visibleCount: Math.min(state.visibleCount + PAGE_SIZE, MOCK_PRODUCTS.length),
       })),
-  }))
+    setPatientSnapshot: (snapshot) => set(() => ({ patientSnapshot: snapshot })),
+  })),
 );
 
 export type CartItem = {
@@ -84,13 +113,6 @@ type CartState = {
   toggle: (open?: boolean) => void;
   subtotal: () => number;
 };
-
-const patientConflictSet = new Set([
-  ...PATIENT_CONTEXT.allergies.map((item) => `allergy-${item}`),
-  ...PATIENT_CONTEXT.medications.map((item) => `med-${item}`),
-  "danger",
-  "warning",
-]);
 
 export const useMarketplaceCart = create<CartState>()(
   devtools((set, get) => ({
@@ -137,7 +159,10 @@ export const useMarketplaceCart = create<CartState>()(
   })),
 );
 
-type FilterState = Pick<MarketplaceState, "debouncedSearch" | "sort" | "priceRange" | "categories" | "tags">;
+type FilterState = Pick<
+  MarketplaceState,
+  "debouncedSearch" | "sort" | "priceRange" | "categories" | "tags"
+>;
 
 export function filterProducts(products: MarketplaceProduct[], state: FilterState) {
   const normalizedSearch = state.debouncedSearch.trim().toLowerCase();
@@ -152,12 +177,7 @@ export function filterProducts(products: MarketplaceProduct[], state: FilterStat
       state.tags.length === 0 || state.tags.some((tag) => product.tags.includes(tag));
     const searchMatch =
       !normalizedSearch ||
-      [
-        product.name,
-        product.shortDescription,
-        ...product.tags,
-        ...product.categories,
-      ]
+      [product.name, product.shortDescription, ...product.tags, ...product.categories]
         .join(" ")
         .toLowerCase()
         .includes(normalizedSearch);
@@ -183,4 +203,69 @@ export function filterProducts(products: MarketplaceProduct[], state: FilterStat
   return filtered;
 }
 
+let subscriptionBound = false;
+
+function bindProfileSnapshotSubscription() {
+  if (subscriptionBound) return;
+  subscriptionBound = true;
+
+  subscribeToProfileSnapshot((detail) => {
+    patientConflictSet = createConflictSet(detail);
+
+    useMarketplaceStore.setState({
+      patientSnapshot: {
+        allergies: detail.allAllergies.map((item) => item.substance),
+        medications: detail.allMedications
+          .filter((med) => med.status === "active")
+          .map((med) => med.name),
+      },
+    });
+
+    useMarketplaceCart.setState((state) => ({
+      items: state.items.map((item) => ({
+        ...item,
+        conflicts: (item.product.conflicts ?? []).filter((flag) =>
+          patientConflictSet.has(flag),
+        ),
+      })),
+    }));
+  });
+}
+
+bindProfileSnapshotSubscription();
+
 export { MOCK_PRODUCTS };
+
+function getInitialProfileSnapshot(): SnapshotEventDetail {
+  try {
+    return getCurrentProfileSnapshot();
+  } catch {
+    return {
+      topAllergies: [],
+      topMeds: [],
+      allAllergies: PATIENT_CONTEXT.allergies.map((substance, index) => ({
+        id: `ctx-allergy-${index}`,
+        substance,
+        reaction: "",
+        severity: "mild",
+      })),
+      allMedications: PATIENT_CONTEXT.medications.map((name, index) => ({
+        id: `ctx-med-${index}`,
+        name,
+        strength: "",
+        frequency: "",
+        status: "active",
+      })),
+    };
+  }
+}
+
+function createConflictSet(detail: SnapshotEventDetail) {
+  const set = new Set<string>();
+  detail.allAllergies.forEach((allergy) => set.add(`allergy-${allergy.substance}`));
+  detail.allMedications.forEach((medication) => set.add(`med-${medication.name}`));
+  set.add("danger");
+  set.add("warning");
+  return set;
+}
+
