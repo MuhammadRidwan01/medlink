@@ -14,7 +14,7 @@ type HeaderProps = {
 
 export function Header({ title, className, onMenuClick, children }: HeaderProps) {
   const pathname = usePathname();
-  const isDoctorRoute = pathname?.startsWith("/(doctor)");
+  const isDoctorRoute = pathname?.startsWith("/doctor");
 
   return (
     <header

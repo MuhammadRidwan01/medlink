@@ -17,7 +17,7 @@ export default function DoctorConsultationListPage() {
         {consultations.map((item) => (
           <Link
             key={item.id}
-            href={`/(doctor)/consultation/${item.id}`}
+            href={`/doctor/consultation/${item.id}`}
             className="card-surface interactive tap-target flex items-center gap-3 p-4"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/10 text-primary">
@@ -33,4 +33,3 @@ export default function DoctorConsultationListPage() {
     </PageShell>
   );
 }
-

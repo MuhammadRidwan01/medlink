@@ -17,17 +17,17 @@ import { SessionSkeleton } from "@/components/layout/session-skeleton";
 
 const patientNav = [
   {
-    href: "/(patient)/dashboard",
+    href: "/patient/dashboard",
     label: "Beranda",
     icon: LayoutDashboard,
   },
   {
-    href: "/(patient)/triage",
+    href: "/patient/triage",
     label: "AI Triage",
     icon: ActivitySquare,
   },
   {
-    href: "/(patient)/prescriptions",
+    href: "/patient/prescriptions",
     label: "Resep",
     icon: Pill,
   },
@@ -84,7 +84,7 @@ export default function PatientLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
         <BottomNav items={patientNav} />
-        <Fab href="/(patient)/triage" />
+        <Fab href="/patient/triage" />
       </div>
     </SessionGate>
   );

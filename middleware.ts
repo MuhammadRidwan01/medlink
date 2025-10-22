@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const PROTECTED_PREFIXES = ["/(patient)", "/(doctor)"];
-const AUTH_PREFIX = "/(auth)";
+const PROTECTED_PREFIXES = ["/patient", "/doctor"];
+const AUTH_PREFIX = "/auth";
 
 const decodeJwtPayload = (token?: string) => {
   if (!token) return null;
@@ -44,7 +44,7 @@ export function middleware(request: NextRequest) {
   const isAuthRoute = pathname.startsWith(AUTH_PREFIX);
 
   if (isProtected && !hasSession) {
-    const loginUrl = new URL("/(auth)/login", request.url);
+    const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
@@ -53,7 +53,7 @@ export function middleware(request: NextRequest) {
     const payload = decodeJwtPayload(request.cookies.get("sb-access-token")?.value);
     const role = resolveRole(payload);
     const dashboardUrl =
-      role === "doctor" ? "/(doctor)/dashboard" : "/(patient)/dashboard";
+      role === "doctor" ? "/doctor/dashboard" : "/patient/dashboard";
     return NextResponse.redirect(new URL(dashboardUrl, request.url));
   }
 
@@ -61,5 +61,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/(patient)/(.*)", "/(doctor)/(.*)", "/(auth)/(.*)"],
+  matcher: ["/patient/(.*)", "/doctor/(.*)", "/auth/(.*)"],
 };

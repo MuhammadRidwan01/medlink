@@ -12,17 +12,17 @@ import { SessionSkeleton } from "@/components/layout/session-skeleton";
 
 const doctorNav = [
   {
-    href: "/(doctor)/dashboard",
+    href: "/doctor/dashboard",
     label: "Ringkasan",
     icon: LayoutDashboard,
   },
   {
-    href: "/(doctor)/queue",
+    href: "/doctor/queue",
     label: "Antrian",
     icon: ClipboardList,
   },
   {
-    href: "/(doctor)/consultation",
+    href: "/doctor/consultation",
     label: "Konsultasi",
     icon: Video,
   },
@@ -78,7 +78,7 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
         <BottomNav items={doctorNav} />
-        <Fab href="/(doctor)/queue" label="Lihat Antrian" />
+        <Fab href="/doctor/queue" label="Lihat Antrian" />
       </div>
     </SessionGate>
   );

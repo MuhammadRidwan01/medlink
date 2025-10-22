@@ -1,7 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | null = null;
 
@@ -19,7 +18,12 @@ export const getSupabaseBrowserClient = () => {
     );
   }
 
-  client = createBrowserClient(url, anonKey);
+  client = createClient(url, anonKey, {
+    auth: {
+      persistSession: true,
+      detectSessionInUrl: true,
+    },
+  });
+
   return client;
 };
-

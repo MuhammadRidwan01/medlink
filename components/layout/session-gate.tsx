@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/hooks/use-session";
 import { useToast } from "@/components/ui/use-toast";
 import { SessionSkeleton } from "./session-skeleton";
@@ -15,23 +15,25 @@ type SessionGateProps = {
 export function SessionGate({ allowedRoles, children, fallback }: SessionGateProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchString = searchParams.toString();
   const { toast } = useToast();
   const { status, user, role } = useSession();
   const hasToastedRef = useRef(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      if (!hasToastedRef.current && !pathname.startsWith("/(auth)")) {
+      if (!hasToastedRef.current && !pathname.startsWith("/auth")) {
         toast({
           title: "Silakan masuk dulu",
           description: "Harap masuk untuk melanjutkan konsultasi Anda.",
         });
         hasToastedRef.current = true;
       }
-      const redirect = pathname;
-      router.replace(`/(auth)/login?redirect=${encodeURIComponent(redirect)}`);
+      const redirect = searchString ? `${pathname}?${searchString}` : pathname;
+      router.replace(`/auth/login?redirect=${encodeURIComponent(redirect)}`);
     }
-  }, [pathname, router, status, toast]);
+  }, [pathname, router, searchString, status, toast]);
 
   useEffect(() => {
     if (
@@ -49,7 +51,7 @@ export function SessionGate({ allowedRoles, children, fallback }: SessionGatePro
         });
         hasToastedRef.current = true;
       }
-      router.replace(role === "doctor" ? "/(doctor)/dashboard" : "/(patient)/dashboard");
+      router.replace(role === "doctor" ? "/doctor/dashboard" : "/patient/dashboard");
     }
   }, [allowedRoles, role, router, status, toast, user]);
 

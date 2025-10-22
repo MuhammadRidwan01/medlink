@@ -79,7 +79,7 @@ export default function RegisterPage() {
     });
 
     setTimeout(() => {
-      router.replace("/(auth)/login");
+      router.replace("/auth/login");
     }, 200);
     setIsLoading(false);
   };
@@ -208,7 +208,7 @@ export default function RegisterPage() {
       >
         Sudah punya akun?{" "}
         <Link
-          href="/(auth)/login"
+          href="/auth/login"
           className="font-semibold text-primary underline-offset-4 transition-colors hover:text-primary/90 hover:underline"
         >
           Masuk

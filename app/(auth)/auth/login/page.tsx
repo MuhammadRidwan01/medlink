@@ -61,7 +61,7 @@ export default function LoginPage() {
     });
 
     const role = inferRoleFromEmail(form.email.trim());
-    const fallbackRoute = role === "doctor" ? "/(doctor)/dashboard" : "/(patient)/dashboard";
+    const fallbackRoute = role === "doctor" ? "/doctor/dashboard" : "/patient/dashboard";
     const destination = redirectTo ?? fallbackRoute;
 
     setTimeout(() => {
@@ -156,7 +156,7 @@ export default function LoginPage() {
       >
         Belum punya akun?{" "}
         <Link
-          href="/(auth)/register"
+          href="/auth/register"
           className="font-semibold text-primary underline-offset-4 transition-colors hover:text-primary/90 hover:underline"
         >
           Daftar sekarang

@@ -27,7 +27,7 @@ export default function DoctorQueuePage() {
         {queueItems.map((patient) => (
           <Link
             key={patient.id}
-            href={`/(doctor)/consultation/${patient.id}`}
+            href={`/doctor/consultation/${patient.id}`}
             className="card-surface interactive tap-target block p-4"
           >
             <div className="flex items-start justify-between gap-3">
@@ -56,4 +56,3 @@ export default function DoctorQueuePage() {
     </PageShell>
   );
 }
-
