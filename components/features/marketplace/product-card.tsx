@@ -10,21 +10,20 @@ import type { MarketplaceProduct } from "@/components/features/marketplace/data"
 import { InteractionHint } from "@/components/features/marketplace/interaction-hint";
 import { InventoryBadge } from "@/components/features/marketplace/inventory-badge";
 import { RatingStars } from "@/components/features/marketplace/rating-stars";
-import { useMarketplaceCart } from "@/components/features/marketplace/store";
+import { useMarketplaceCart, useMarketplaceSafety } from "@/components/features/marketplace/store";
 
 type ProductCardProps = {
   product: MarketplaceProduct;
   priority?: boolean;
 };
 
-const conflictFlags = new Set(["danger", "warning", "allergy-penisilin", "allergy-sulfa", "med-metformin", "med-atorvastatin"]);
-
 export function ProductCard({ product, priority }: ProductCardProps) {
   const addItem = useMarketplaceCart((state) => state.addItem);
   const toggleCart = useMarketplaceCart((state) => state.toggle);
+  const warningEntry = useMarketplaceSafety((state) => state.warnings[product.id]);
   const [isAdding, setIsAdding] = useState(false);
 
-  const conflicts = (product.conflicts ?? []).filter((flag) => conflictFlags.has(flag));
+  const warnings = warningEntry ?? [];
 
   const handleAddToCart = () => {
     setIsAdding(true);
@@ -98,7 +97,7 @@ export function ProductCard({ product, priority }: ProductCardProps) {
             <ShoppingBag className="h-4 w-4" aria-hidden="true" />
             Tambah ke keranjang
           </motion.button>
-          <InteractionHint conflicts={conflicts} />
+          <InteractionHint warnings={warnings ?? []} />
         </div>
       </div>
     </motion.article>

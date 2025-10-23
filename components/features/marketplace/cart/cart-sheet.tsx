@@ -4,12 +4,22 @@ import * as Dialog from "@radix-ui/react-dialog";
 import Image from "next/image";
 import { AnimatePresence, cubicBezier, motion } from "framer-motion";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
-import { useMarketplaceCart } from "@/components/features/marketplace/store";
+import { useEffect } from "react";
+import { InteractionHint } from "@/components/features/marketplace/interaction-hint";
+import { useMarketplaceCart, useMarketplaceSafety } from "@/components/features/marketplace/store";
 import { cn } from "@/lib/utils";
 
 export function CartSheet() {
   const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
   const { isOpen, items, toggle, updateQuantity, removeItem, subtotal } = useMarketplaceCart();
+  const warningsMap = useMarketplaceSafety((state) => state.warnings);
+  const fetchConflicts = useMarketplaceSafety((state) => state.fetchConflicts);
+
+  useEffect(() => {
+    if (items.length) {
+      void fetchConflicts(items.map((item) => item.product.id));
+    }
+  }, [fetchConflicts, items]);
 
   const content = (
     <motion.div
@@ -77,7 +87,7 @@ export function CartSheet() {
                     <button
                       type="button"
                       onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                      className="tap-target rounded-full border border-border/60 p-1 text-muted-foreground transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-muted/40"
+                      className="tap-target flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-background text-muted-foreground transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-muted/40"
                         aria-label="Kurangi jumlah"
                       >
                         <Minus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -86,7 +96,7 @@ export function CartSheet() {
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                        className="tap-target rounded-full border border-border/60 p-1 text-muted-foreground transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-muted/40"
+                        className="tap-target flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-background text-muted-foreground transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-muted/40"
                         aria-label="Tambah jumlah"
                       >
                         <Plus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -96,11 +106,10 @@ export function CartSheet() {
                       Rp {(item.product.price * item.quantity).toLocaleString("id-ID")}
                     </span>
                   </div>
-                  {item.conflicts.length ? (
-                    <div className="rounded-card border border-warning/40 bg-warning/10 px-2 py-1 text-[11px] text-warning">
-                      Produk ini memiliki catatan interaksi dengan profil Anda.
-                    </div>
-                  ) : null}
+                  <InteractionHint
+                    warnings={warningsMap[item.product.id] ?? []}
+                    className="mt-2"
+                  />
                 </div>
               </article>
             ))

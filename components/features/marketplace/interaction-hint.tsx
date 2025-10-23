@@ -1,18 +1,31 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { AlertCircle, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Info, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { MarketplaceSafetyWarning } from "@/components/features/marketplace/safety";
 
 type InteractionHintProps = {
-  conflicts: string[];
+  warnings: MarketplaceSafetyWarning[];
+  className?: string;
 };
 
-export function InteractionHint({ conflicts }: InteractionHintProps) {
-  if (!conflicts.length) return null;
+export function InteractionHint({ warnings, className }: InteractionHintProps) {
+  if (!warnings || warnings.length === 0) return null;
 
-  const severity = conflicts.includes("danger") ? "danger" : "warning";
-  const Icon = severity === "danger" ? ShieldAlert : AlertCircle;
+  const severity = warnings.some((warning) => warning.severity === "danger")
+    ? "danger"
+    : warnings.some((warning) => warning.severity === "warning")
+      ? "warning"
+      : "caution";
+
+  const Icon = severity === "danger" ? ShieldAlert : severity === "warning" ? AlertTriangle : Info;
+
+  const tone = {
+    danger: "border-danger/50 bg-danger/10 text-danger",
+    warning: "border-warning/50 bg-warning/10 text-warning",
+    caution: "border-accent/40 bg-accent/10 text-accent-foreground",
+  } as const;
 
   return (
     <motion.div
@@ -20,22 +33,31 @@ export function InteractionHint({ conflicts }: InteractionHintProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
       className={cn(
-        "mt-2 flex items-start gap-2 rounded-card border px-3 py-2 text-xs leading-snug",
-        severity === "danger"
-          ? "border-danger/40 bg-danger/10 text-danger"
-          : "border-warning/40 bg-warning/10 text-warning",
+        "mt-3 flex gap-3 rounded-card border px-4 py-3 text-sm leading-snug outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        tone[severity],
+        className,
       )}
-      role="status"
+      role="alert"
+      tabIndex={0}
       aria-live="polite"
     >
-      <Icon className="mt-0.5 h-4 w-4" aria-hidden="true" />
-      <div>
-        <p className="font-semibold uppercase tracking-wide">Perhatian interaksi</p>
-        <p>{
-          severity === "danger"
-            ? "Produk ini mungkin bertentangan dengan alergi atau obat aktif Anda. Konsultasikan sebelum melanjutkan."
-            : "Ada catatan interaksi ringan. Pastikan dokter mengetahui penggunaan produk ini."
-        }</p>
+      <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-background/70 text-current shadow-inner">
+        <Icon className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-current/90">
+          Pengingat keamanan terapi
+        </p>
+        <ul className="space-y-1">
+          {warnings.map((warning) => (
+            <li key={warning.id} className="text-sm text-current/90">
+              <span className="font-semibold text-current">
+                {warning.type === "allergy" ? "Alergi" : "Obat"}: {warning.value}
+              </span>
+              <span className="ml-1 text-current/80">{warning.message}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </motion.div>
   );

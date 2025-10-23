@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, ShoppingCart, Tag } from "lucide-react";
@@ -12,20 +12,11 @@ import { RatingStars } from "@/components/features/marketplace/rating-stars";
 import { CartSheet } from "@/components/features/marketplace/cart/cart-sheet";
 import { CartTrigger } from "@/components/features/marketplace/cart/cart-trigger";
 import { MOCK_PRODUCTS } from "@/components/features/marketplace/data";
-import { useMarketplaceCart } from "@/components/features/marketplace/store";
+import { useMarketplaceCart, useMarketplaceSafety } from "@/components/features/marketplace/store";
 
 type ProductDetailPageClientProps = {
   slug: string;
 };
-
-const conflictFlags = new Set([
-  "danger",
-  "warning",
-  "allergy-penisilin",
-  "allergy-sulfa",
-  "med-metformin",
-  "med-atorvastatin",
-]);
 
 export function ProductDetailPageClient({
   slug,
@@ -33,6 +24,11 @@ export function ProductDetailPageClient({
   const product = MOCK_PRODUCTS.find((item) => item.slug === slug);
   const addItem = useMarketplaceCart((state) => state.addItem);
   const toggleCart = useMarketplaceCart((state) => state.toggle);
+  const warningEntry = useMarketplaceSafety((state) =>
+    product ? state.warnings[product.id] : undefined,
+  );
+  const fetchConflicts = useMarketplaceSafety((state) => state.fetchConflicts);
+  const productId = product?.id;
 
   const relatedProducts = useMemo(() => {
     if (!product) return [];
@@ -45,6 +41,12 @@ export function ProductDetailPageClient({
         ),
     ).slice(0, 4);
   }, [product]);
+
+  useEffect(() => {
+    if (productId && warningEntry === undefined) {
+      void fetchConflicts([productId]);
+    }
+  }, [fetchConflicts, productId, warningEntry]);
 
   if (!product) {
     return (
@@ -63,9 +65,7 @@ export function ProductDetailPageClient({
     );
   }
 
-  const conflicts = (product.conflicts ?? []).filter((flag) =>
-    conflictFlags.has(flag),
-  );
+  const warnings = warningEntry ?? [];
 
   const handleAddCart = () => {
     addItem(product);
@@ -121,7 +121,7 @@ export function ProductDetailPageClient({
               </span>
             ))}
           </div>
-          <InteractionHint conflicts={conflicts} />
+          <InteractionHint warnings={warnings} />
         </div>
 
         <aside className="card-surface flex h-max flex-col gap-4 p-4">

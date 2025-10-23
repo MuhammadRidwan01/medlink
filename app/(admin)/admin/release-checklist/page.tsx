@@ -29,9 +29,11 @@ async function checkTriageMock(): Promise<Check> {
 async function checkDraftPrescriptionConflict(): Promise<Check> {
   try {
     const data = await import("@/components/features/marketplace/data");
-    const { useMarketplaceCart } = await import("@/components/features/marketplace/store");
+    const { useMarketplaceCart, useMarketplaceSafety } = await import("@/components/features/marketplace/store");
     const products: MarketplaceProduct[] = data.MOCK_PRODUCTS ?? [];
-    const productWithConflict = products.find((product): product is MarketplaceProduct & { conflicts: string[] } => Array.isArray(product.conflicts) && product.conflicts.length > 0);
+    const productWithConflict = products.find(
+      (product) => Array.isArray(product.contraindications) && product.contraindications.length > 0,
+    );
     if (!productWithConflict)
       return {
         id: "rx",
@@ -39,12 +41,16 @@ async function checkDraftPrescriptionConflict(): Promise<Check> {
         pass: false,
         detail: "no product with conflicts",
       };
-    const store = useMarketplaceCart.getState();
-    store.addItem(productWithConflict);
-    const item = useMarketplaceCart
-      .getState()
-      .items.find((cartItem) => cartItem.product.id === productWithConflict.id);
-    const ok = Boolean(item && (item.conflicts?.length || 0) > 0);
+
+    useMarketplaceCart.setState({ items: [], isOpen: false });
+
+    const cart = useMarketplaceCart.getState();
+    cart.addItem(productWithConflict);
+
+    await useMarketplaceSafety.getState().fetchConflicts([productWithConflict.id]);
+    const warnings = useMarketplaceSafety.getState().warnings[productWithConflict.id] ?? [];
+
+    const ok = warnings.length > 0;
     return { id: "rx", label: "Draft Prescription interaction warning", pass: ok };
   } catch (e) {
     return { id: "rx", label: "Draft Prescription interaction warning", pass: false, detail: String(e) };
