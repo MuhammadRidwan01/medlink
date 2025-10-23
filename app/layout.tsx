@@ -3,6 +3,7 @@ import "./globals.css";
 import { ToastProviderContext } from "@/components/ui/use-toast";
 import { GlobalCommandPalette } from "@/components/features/command/command-palette";
 import { SeedBootstrap } from "@/components/dev/seed-bootstrap";
+import { ClinicalRealtimeBootstrap } from "@/components/clinical/clinical-realtime-bootstrap";
 
 export const metadata: Metadata = {
   title: "MedLink AI",
@@ -26,6 +27,8 @@ export default function RootLayout({
           <GlobalCommandPalette />
           {/* Client bootstrap to apply mock seeds and demo flags */}
           <SeedBootstrap />
+          {/* Global realtime subscriptions for clinical domain */}
+          <ClinicalRealtimeBootstrap />
         </ToastProviderContext>
       </body>
     </html>

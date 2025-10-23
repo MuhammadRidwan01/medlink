@@ -1,5 +1,7 @@
 "use client";
 
+import type { DbPrescription } from "@/lib/clinical/types";
+
 export type DraftStatus = "draft" | "awaiting_approval" | "approved" | "rejected";
 
 export type DraftItem = {
@@ -113,3 +115,20 @@ export function rejectDraft(id: string, reason?: string) {
   updateDraft(id, { status: "rejected", note: reason ?? "" });
 }
 
+// Bridge helper: upsert from DB prescription into demo store (status + basic fields)
+export function upsertDbPrescription(row: DbPrescription) {
+  const existing = __drafts.find((d) => d.id === row.id);
+  if (existing) {
+    updateDraft(row.id, { status: row.status });
+    return;
+  }
+  const rec: DraftRecord = {
+    id: row.id,
+    patientName: "(unknown)",
+    createdAt: row.created_at,
+    status: row.status,
+    items: [],
+  };
+  __drafts = [...__drafts, rec];
+  emit();
+}
