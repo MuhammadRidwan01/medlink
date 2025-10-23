@@ -1,5 +1,16 @@
 export type MarketplaceCategory = "Obat" | "Vitamin" | "Perangkat" | "Layanan" | "Herbal";
 
+export type ContraindicationType = "allergy" | "medication";
+export type ContraindicationSeverity = "caution" | "warning" | "danger";
+
+export type ProductContraindication = {
+  id: string;
+  type: ContraindicationType;
+  value: string;
+  severity: ContraindicationSeverity;
+  note?: string;
+};
+
 export type MarketplaceProduct = {
   id: string;
   slug: string;
@@ -14,7 +25,7 @@ export type MarketplaceProduct = {
   ratingCount: number;
   inventoryStatus: "in-stock" | "low-stock" | "out-of-stock";
   badges?: string[];
-  conflicts?: string[];
+  contraindications?: ProductContraindication[];
 };
 
 export const PATIENT_CONTEXT = {
@@ -53,7 +64,15 @@ export const MOCK_PRODUCTS: MarketplaceProduct[] = [
     rating: 4.4,
     ratingCount: 96,
     inventoryStatus: "low-stock",
-    conflicts: ["danger"],
+    contraindications: [
+      {
+        id: "allergy-sulfa",
+        type: "allergy",
+        value: "sulfa",
+        severity: "danger",
+        note: "Riwayat alergi sulfa dapat meningkatkan risiko reaksi dengan NSAID tertentu.",
+      },
+    ],
   },
   {
     id: "prod-3",
@@ -86,7 +105,15 @@ export const MOCK_PRODUCTS: MarketplaceProduct[] = [
     ratingCount: 73,
     inventoryStatus: "in-stock",
     badges: ["Direkomendasikan"],
-    conflicts: ["med-metformin"],
+    contraindications: [
+      {
+        id: "med-metformin",
+        type: "medication",
+        value: "metformin",
+        severity: "warning",
+        note: "Periksa sinkronisasi data gula darah dengan terapi metformin aktif Anda.",
+      },
+    ],
   },
   {
     id: "prod-5",
@@ -194,7 +221,15 @@ export const MOCK_PRODUCTS: MarketplaceProduct[] = [
     rating: 4.5,
     ratingCount: 88,
     inventoryStatus: "out-of-stock",
-    conflicts: ["med-metformin", "danger"],
+    contraindications: [
+      {
+        id: "med-metformin",
+        type: "medication",
+        value: "metformin",
+        severity: "danger",
+        note: "Anda telah memiliki metformin aktif di profil. Konsultasikan sebelum menambah stok.",
+      },
+    ],
   },
   {
     id: "prod-12",
@@ -301,7 +336,15 @@ export const MOCK_PRODUCTS: MarketplaceProduct[] = [
     rating: 4.2,
     ratingCount: 33,
     inventoryStatus: "in-stock",
-    conflicts: ["med-atorvastatin", "warning"],
+    contraindications: [
+      {
+        id: "med-atorvastatin",
+        type: "medication",
+        value: "atorvastatin",
+        severity: "warning",
+        note: "Pantau kadar kolesterol dan konsultasikan penyesuaian terapi statin Anda.",
+      },
+    ],
   },
   {
     id: "prod-19",
@@ -332,7 +375,15 @@ export const MOCK_PRODUCTS: MarketplaceProduct[] = [
     rating: 4.4,
     ratingCount: 27,
     inventoryStatus: "low-stock",
-    conflicts: ["med-metformin"],
+    contraindications: [
+      {
+        id: "med-metformin",
+        type: "medication",
+        value: "metformin",
+        severity: "warning",
+        note: "Pastikan dosis insulin disesuaikan dengan terapi metformin saat ini.",
+      },
+    ],
   },
   {
     id: "prod-21",

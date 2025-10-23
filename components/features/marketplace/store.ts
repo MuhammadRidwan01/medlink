@@ -8,18 +8,14 @@ import {
   type MarketplaceProduct,
   type MarketplaceCategory,
 } from "./data";
-import {
-  getCurrentProfileSnapshot,
-  subscribeToProfileSnapshot,
-  type SnapshotEventDetail,
-} from "@/components/features/profile/store";
+import type {
+  MarketplaceSafetyResponse,
+  MarketplaceSafetyResult,
+  MarketplaceSafetySnapshot,
+  MarketplaceSafetyWarning,
+} from "@/components/features/marketplace/safety";
 
 export type SortOption = "relevance" | "price-asc" | "price-desc" | "rating";
-
-type PatientSnapshotStrings = {
-  allergies: string[];
-  medications: string[];
-};
 
 type MarketplaceState = {
   search: string;
@@ -29,23 +25,27 @@ type MarketplaceState = {
   categories: MarketplaceCategory[];
   tags: string[];
   visibleCount: number;
-  patientSnapshot: PatientSnapshotStrings;
+  patientSnapshot: MarketplaceSafetySnapshot;
   setSearch: (value: string) => void;
   setDebouncedSearch: (value: string) => void;
   setSort: (value: SortOption) => void;
   setPriceRange: (range: [number, number]) => void;
+  selectCategory: (category?: MarketplaceCategory) => void;
   toggleCategory: (category: MarketplaceCategory) => void;
   toggleTag: (tag: string) => void;
   resetFilters: () => void;
   loadMore: () => void;
-  setPatientSnapshot: (snapshot: PatientSnapshotStrings) => void;
+  setPatientSnapshot: (snapshot: MarketplaceSafetySnapshot) => void;
 };
 
 const DEFAULT_PRICE_RANGE: [number, number] = [0, 600000];
 const PAGE_SIZE = 8;
 
-const initialSnapshotDetail = getInitialProfileSnapshot();
-let patientConflictSet = createConflictSet(initialSnapshotDetail);
+const FALLBACK_SNAPSHOT: MarketplaceSafetySnapshot = {
+  allergies: PATIENT_CONTEXT.allergies,
+  medications: PATIENT_CONTEXT.medications,
+  source: "fallback",
+};
 
 export const useMarketplaceStore = create<MarketplaceState>()(
   devtools((set) => ({
@@ -56,16 +56,16 @@ export const useMarketplaceStore = create<MarketplaceState>()(
     categories: [],
     tags: [],
     visibleCount: PAGE_SIZE,
-    patientSnapshot: {
-      allergies: initialSnapshotDetail.allAllergies.map((a) => a.substance),
-      medications: initialSnapshotDetail.allMedications
-        .filter((med) => med.status === "active")
-        .map((med) => med.name),
-    },
+    patientSnapshot: FALLBACK_SNAPSHOT,
     setSearch: (value) => set(() => ({ search: value })),
     setDebouncedSearch: (value) => set(() => ({ debouncedSearch: value, visibleCount: PAGE_SIZE })),
     setSort: (value) => set(() => ({ sort: value, visibleCount: PAGE_SIZE })),
     setPriceRange: (range) => set(() => ({ priceRange: range, visibleCount: PAGE_SIZE })),
+    selectCategory: (category) =>
+      set(() => ({
+        categories: category ? [category] : [],
+        visibleCount: PAGE_SIZE,
+      })),
     toggleCategory: (category) =>
       set((state) => {
         const categories = state.categories.includes(category)
@@ -101,7 +101,6 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 export type CartItem = {
   product: MarketplaceProduct;
   quantity: number;
-  conflicts: string[];
 };
 
 type CartState = {
@@ -121,16 +120,15 @@ export const useMarketplaceCart = create<CartState>()(
     addItem: (product) => {
       set((state) => {
         const existing = state.items.find((item) => item.product.id === product.id);
-        const conflicts = (product.conflicts ?? []).filter((flag) => patientConflictSet.has(flag));
         if (existing) {
           const items = state.items.map((item) =>
             item.product.id === product.id
-              ? { ...item, quantity: item.quantity + 1, conflicts }
+              ? { ...item, quantity: item.quantity + 1 }
               : item,
           );
           return { items, isOpen: true };
         }
-        return { items: [...state.items, { product, quantity: 1, conflicts }], isOpen: true };
+        return { items: [...state.items, { product, quantity: 1 }], isOpen: true };
       });
     },
     removeItem: (productId) => {
@@ -203,70 +201,95 @@ export function filterProducts(products: MarketplaceProduct[], state: FilterStat
   return filtered;
 }
 
-let subscriptionBound = false;
+type SafetyState = {
+  snapshot: MarketplaceSafetySnapshot;
+  warnings: Record<string, MarketplaceSafetyWarning[]>;
+  status: "idle" | "loading" | "ready" | "error";
+  lastError?: string;
+  fetchConflicts: (productIds: string[]) => Promise<MarketplaceSafetyResult[]>;
+  resetWarnings: (productIds?: string[]) => void;
+};
 
-function bindProfileSnapshotSubscription() {
-  if (subscriptionBound) return;
-  subscriptionBound = true;
+export const useMarketplaceSafety = create<SafetyState>()(
+  devtools((set, get) => ({
+    snapshot: FALLBACK_SNAPSHOT,
+    warnings: {},
+    status: "idle",
+    lastError: undefined,
+    async fetchConflicts(productIds) {
+      const uniqueIds = [...new Set(productIds)];
+      const currentWarnings = get().warnings;
+      const missing = uniqueIds.filter((id) => !currentWarnings[id]);
 
-  subscribeToProfileSnapshot((detail) => {
-    patientConflictSet = createConflictSet(detail);
+      if (missing.length === 0) {
+        return uniqueIds.map((id) => ({
+          productId: id,
+          warnings: currentWarnings[id] ?? [],
+        }));
+      }
 
-    useMarketplaceStore.setState({
-      patientSnapshot: {
-        allergies: detail.allAllergies.map((item) => item.substance),
-        medications: detail.allMedications
-          .filter((med) => med.status === "active")
-          .map((med) => med.name),
-      },
-    });
+      set({ status: "loading", lastError: undefined });
 
-    useMarketplaceCart.setState((state) => ({
-      items: state.items.map((item) => ({
-        ...item,
-        conflicts: (item.product.conflicts ?? []).filter((flag) =>
-          patientConflictSet.has(flag),
-        ),
-      })),
-    }));
-  });
-}
+      try {
+        const response = await fetch("/api/marketplace/safety", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ productIds: missing }),
+        });
 
-if (typeof window !== "undefined") {
-  bindProfileSnapshotSubscription();
-}
+        if (!response.ok) {
+          throw new Error(`Safety API returned ${response.status}`);
+        }
+
+        const payload = (await response.json()) as MarketplaceSafetyResponse;
+        const updatedMap: Record<string, MarketplaceSafetyWarning[]> = {
+          ...currentWarnings,
+        };
+
+        payload.conflicts.forEach((result) => {
+          updatedMap[result.productId] = result.warnings;
+        });
+
+        set({
+          snapshot: payload.snapshot,
+          warnings: updatedMap,
+          status: "ready",
+        });
+
+        useMarketplaceStore.setState({
+          patientSnapshot: payload.snapshot,
+        });
+
+        return uniqueIds.map((id) => ({
+          productId: id,
+          warnings: updatedMap[id] ?? [],
+        }));
+      } catch (error) {
+        console.error("Failed to fetch marketplace safety data", error);
+        set({
+          status: "error",
+          lastError: error instanceof Error ? error.message : "Unknown error",
+        });
+        return uniqueIds.map((id) => ({
+          productId: id,
+          warnings: currentWarnings[id] ?? [],
+        }));
+      }
+    },
+    resetWarnings(productIds) {
+      if (!productIds || productIds.length === 0) {
+        set({ warnings: {} });
+        return;
+      }
+      const next = { ...get().warnings };
+      productIds.forEach((id) => {
+        delete next[id];
+      });
+      set({ warnings: next });
+    },
+  })),
+);
 
 export { MOCK_PRODUCTS };
-
-function getInitialProfileSnapshot(): SnapshotEventDetail {
-  try {
-    return getCurrentProfileSnapshot();
-  } catch {
-    return {
-      topAllergies: [],
-      topMeds: [],
-      allAllergies: PATIENT_CONTEXT.allergies.map((substance, index) => ({
-        id: `ctx-allergy-${index}`,
-        substance,
-        reaction: "",
-        severity: "mild",
-      })),
-      allMedications: PATIENT_CONTEXT.medications.map((name, index) => ({
-        id: `ctx-med-${index}`,
-        name,
-        strength: "",
-        frequency: "",
-        status: "active",
-      })),
-    };
-  }
-}
-
-function createConflictSet(detail: SnapshotEventDetail) {
-  const set = new Set<string>();
-  detail.allAllergies.forEach((allergy) => set.add(`allergy-${allergy.substance}`));
-  detail.allMedications.forEach((medication) => set.add(`med-${medication.name}`));
-  set.add("danger");
-  set.add("warning");
-  return set;
-}

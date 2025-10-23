@@ -1,5 +1,6 @@
 export type CheckoutItem = {
   id: string;
+  productId?: string;
   name: string;
   detail: string;
   quantity: number;
@@ -32,6 +33,7 @@ export type PaymentChannel = "virtual_account" | "qris" | "card";
 export const MOCK_CHECKOUT_ITEMS: CheckoutItem[] = [
   {
     id: "rx-azithromycin",
+    productId: "prod-11",
     name: "Azithromycin 500 mg",
     detail: "10 tablet • Generik",
     quantity: 1,
@@ -41,6 +43,7 @@ export const MOCK_CHECKOUT_ITEMS: CheckoutItem[] = [
   },
   {
     id: "otc-cough",
+    productId: "prod-2",
     name: "Sirup Batuk Herbal",
     detail: "Botol 100 mL",
     quantity: 2,
@@ -50,6 +53,7 @@ export const MOCK_CHECKOUT_ITEMS: CheckoutItem[] = [
   },
   {
     id: "device-thermometer",
+    productId: "prod-20",
     name: "Termometer Digital",
     detail: "Akurasi ±0.1°C",
     quantity: 1,

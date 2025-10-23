@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import Image from "next/image";
 import { PackageCheck, Shield } from "lucide-react";
+import { InteractionHint } from "@/components/features/marketplace/interaction-hint";
+import { useMarketplaceSafety } from "@/components/features/marketplace/store";
 import { formatCurrency } from "@/lib/format";
 import type { CheckoutItem, DeliveryOption } from "./mock-data";
 
@@ -22,6 +25,19 @@ export function OrderSummary({
   total,
   selectedDelivery,
 }: OrderSummaryProps) {
+  const warningsMap = useMarketplaceSafety((state) => state.warnings);
+  const fetchConflicts = useMarketplaceSafety((state) => state.fetchConflicts);
+  const trackedProductIds = useMemo(
+    () => Array.from(new Set(items.map((item) => item.productId).filter(Boolean) as string[])),
+    [items],
+  );
+
+  useEffect(() => {
+    if (trackedProductIds.length) {
+      void fetchConflicts(trackedProductIds);
+    }
+  }, [fetchConflicts, trackedProductIds]);
+
   return (
     <aside className="space-y-5 rounded-card border border-border/80 bg-card p-5 shadow-md">
       <header className="flex items-center justify-between">
@@ -36,33 +52,37 @@ export function OrderSummary({
       </header>
 
       <div className="space-y-3">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-center gap-3 rounded-card border border-border/60 bg-muted/30 p-3"
-          >
-            <div className="relative h-16 w-16 overflow-hidden rounded-card bg-muted">
-              <Image
-                src={item.imageUrl}
-                alt={item.name}
-                fill
-                sizes="64px"
-                className="object-cover"
-                priority={false}
-              />
-            </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-sm font-semibold text-foreground">{item.name}</p>
-              <p className="text-xs text-muted-foreground">{item.detail}</p>
-              <p className="text-xs text-muted-foreground">
-                Jumlah: <span className="font-semibold text-foreground">{item.quantity}</span>
+        {items.map((item) => {
+          const warnings = item.productId ? warningsMap[item.productId] ?? [] : [];
+          return (
+            <div
+              key={item.id}
+              className="flex items-center gap-3 rounded-card border border-border/60 bg-muted/30 p-3"
+            >
+              <div className="relative h-16 w-16 overflow-hidden rounded-card bg-muted">
+                <Image
+                  src={item.imageUrl}
+                  alt={item.name}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                  priority={false}
+                />
+              </div>
+              <div className="flex-1 space-y-2">
+                <p className="text-sm font-semibold text-foreground">{item.name}</p>
+                <p className="text-xs text-muted-foreground">{item.detail}</p>
+                <p className="text-xs text-muted-foreground">
+                  Jumlah: <span className="font-semibold text-foreground">{item.quantity}</span>
+                </p>
+                <InteractionHint warnings={warnings} className="mt-1" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                {formatCurrency(item.price * item.quantity)}
               </p>
             </div>
-            <p className="text-sm font-semibold text-foreground">
-              {formatCurrency(item.price * item.quantity)}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="space-y-2 rounded-card border border-border/60 bg-muted/40 p-4 text-sm">
