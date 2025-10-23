@@ -1,20 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { cubicBezier, motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { QueueList } from "./queue-list";
 import { SplitPane } from "./split-pane";
 import type { OrderEntry } from "./session-tabs";
 import { SessionTabs as ConsultationTabs } from "@/components/features/consultation/session-tabs";
 import { consultationBus } from "@/components/features/consultation/event-bus";
-import { MEDICATION_OPTIONS, type MedicationOption } from "@/components/features/prescription/medication-search";
+import { MEDICATION_OPTIONS } from "@/components/features/prescription/medication-search";
 import { PatientSnapshot } from "./patient-snapshot";
 import { HeaderActions } from "./header-actions";
 import type { RedFlagSeverity } from "./red-flag-banner";
 import type { ChatMessageProps } from "@/components/features/ai-triage/chat-message";
 import { useToast } from "@/components/ui/use-toast";
-import type { QueueEntry } from "./queue-item";
+import type { QueueEntry, QueueStatus } from "./queue-item";
 import dynamic from "next/dynamic";
 import type { DraftMedication, DraftStatus, MedicationOption } from "@/components/features/prescription/draft-prescription-sheet";
 const DraftPrescriptionSheet = dynamic(
@@ -24,9 +24,11 @@ const DraftPrescriptionSheet = dynamic(
 import { MiniScheduler } from "@/components/features/schedule/mini-scheduler";
 import { addDraft } from "@/components/features/prescription/store";
 
-type ConsultationWorkspaceProps = {
+const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
+
+interface ConsultationWorkspaceProps {
   consultationId: string;
-};
+}
 
 const queueSeed: QueueEntry[] = [
   {
@@ -96,8 +98,9 @@ const queueSeed: QueueEntry[] = [
     notes: "AI menyarankan skrining TB.",
   },
 ];
+type QueueId = (typeof queueSeed)[number]["id"];
 
-const messagesSeed: Record<string, ChatMessageProps[]> = {
+const messagesSeed: Record<QueueId, ChatMessageProps[]> = {
   "queue-1": [
     {
       id: "q1-ai-1",
@@ -197,10 +200,7 @@ const messagesSeed: Record<string, ChatMessageProps[]> = {
     },
   ],
 };
-
-// legacy notes seed removed; notes move to structured Notes pane
-
-const ordersSeed: Record<string, OrderEntry[]> = {
+const ordersSeed: Record<QueueId, OrderEntry[]> = {
   "queue-1": [
     {
       id: "order-q1-1",
@@ -228,7 +228,22 @@ const ordersSeed: Record<string, OrderEntry[]> = {
   ],
 };
 
-const snapshotSeed = {
+const snapshotSeed: Record<
+  QueueId,
+  {
+    name: string;
+    age: number;
+    gender: string;
+    weight: string;
+    lastVisit: string;
+    diagnosis: string;
+    riskLevel: "low" | "moderate" | "high" | "emergency";
+    allergies: string[];
+    medications: { name: string; dosage: string; frequency: string }[];
+    redFlags: string[];
+    vitals: Array<{ label: string; value: string; icon: "temp" | "bp" | "pulse" }>;
+  }
+> = {
   "queue-1": {
     name: "Aulia Pratama",
     age: 32,
@@ -236,17 +251,17 @@ const snapshotSeed = {
     weight: "62 kg",
     lastVisit: "Kontrol terakhir 2 bulan lalu",
     diagnosis: "Observasi infeksi akut vs. tifus",
-    riskLevel: "moderate" as const,
+    riskLevel: "moderate",
     allergies: ["Penisilin"],
     medications: [
       { name: "Paracetamol", dosage: "500mg", frequency: "3x sehari" },
       { name: "Vitamin C", dosage: "500mg", frequency: "1x sehari" },
     ],
-    redFlags: ["Demam > 39°C selama 2 jam", "Nyeri sendi hebat"],
+    redFlags: ["Demam > 39C selama 2 jam", "Nyeri sendi hebat"],
     vitals: [
-      { label: "Suhu", value: "39.1°C", icon: "temp" as const },
-      { label: "Tekanan darah", value: "118/76", icon: "bp" as const },
-      { label: "Nadi", value: "104 bpm", icon: "pulse" as const },
+      { label: "Suhu", value: "39.1C", icon: "temp" },
+      { label: "Tekanan darah", value: "118/76", icon: "bp" },
+      { label: "Nadi", value: "104 bpm", icon: "pulse" },
     ],
   },
   "queue-3": {
@@ -256,7 +271,7 @@ const snapshotSeed = {
     weight: "82 kg",
     lastVisit: "Kontrol jantung 3 bulan lalu",
     diagnosis: "Curiga Acute Coronary Syndrome",
-    riskLevel: "emergency" as const,
+    riskLevel: "emergency",
     allergies: ["Tidak ada"],
     medications: [
       { name: "Aspirin", dosage: "80mg", frequency: "1x sehari" },
@@ -264,9 +279,9 @@ const snapshotSeed = {
     ],
     redFlags: ["Nyeri dada menjalar", "Keringat dingin", "Riwayat hipertensi"],
     vitals: [
-      { label: "Suhu", value: "37.0°C", icon: "temp" as const },
-      { label: "Tekanan darah", value: "150/95", icon: "bp" as const },
-      { label: "Nadi", value: "112 bpm", icon: "pulse" as const },
+      { label: "Suhu", value: "37.0C", icon: "temp" },
+      { label: "Tekanan darah", value: "150/95", icon: "bp" },
+      { label: "Nadi", value: "112 bpm", icon: "pulse" },
     ],
   },
   "queue-2": {
@@ -276,7 +291,7 @@ const snapshotSeed = {
     weight: "68 kg",
     lastVisit: "Kontrol asma 1 bulan lalu",
     diagnosis: "Eksaserbasi asma akut",
-    riskLevel: "high" as const,
+    riskLevel: "high",
     allergies: ["Debu rumah", "Udara dingin"],
     medications: [
       { name: "Salbutamol Inhaler", dosage: "100mcg", frequency: "PRN" },
@@ -284,9 +299,9 @@ const snapshotSeed = {
     ],
     redFlags: ["Sesak saat istirahat", "Inhaler tidak efektif"],
     vitals: [
-      { label: "Suhu", value: "36.9°C", icon: "temp" as const },
-      { label: "Tekanan darah", value: "124/82", icon: "bp" as const },
-      { label: "Nadi", value: "102 bpm", icon: "pulse" as const },
+      { label: "Suhu", value: "36.9C", icon: "temp" },
+      { label: "Tekanan darah", value: "124/82", icon: "bp" },
+      { label: "Nadi", value: "102 bpm", icon: "pulse" },
     ],
   },
   "queue-4": {
@@ -296,16 +311,16 @@ const snapshotSeed = {
     weight: "54 kg",
     lastVisit: "Belum pernah",
     diagnosis: "Kemungkinan urtikaria akibat obat",
-    riskLevel: "low" as const,
+    riskLevel: "low",
     allergies: ["Sulfa"],
     medications: [
       { name: "Cetirizine", dosage: "10mg", frequency: "1x sehari" },
     ],
     redFlags: ["Ruam menyebar", "Gatal intens"],
     vitals: [
-      { label: "Suhu", value: "36.7°C", icon: "temp" as const },
-      { label: "Tekanan darah", value: "110/70", icon: "bp" as const },
-      { label: "Nadi", value: "88 bpm", icon: "pulse" as const },
+      { label: "Suhu", value: "36.7C", icon: "temp" },
+      { label: "Tekanan darah", value: "110/70", icon: "bp" },
+      { label: "Nadi", value: "88 bpm", icon: "pulse" },
     ],
   },
   "queue-5": {
@@ -315,16 +330,16 @@ const snapshotSeed = {
     weight: "88 kg",
     lastVisit: "Kontrol tekanan darah 1 minggu lalu",
     diagnosis: "Hipertensi terkontrol",
-    riskLevel: "moderate" as const,
+    riskLevel: "moderate",
     allergies: [],
     medications: [
       { name: "Amlodipine", dosage: "5mg", frequency: "1x sehari" },
     ],
     redFlags: [],
     vitals: [
-      { label: "Suhu", value: "36.5°C", icon: "temp" as const },
-      { label: "Tekanan darah", value: "130/85", icon: "bp" as const },
-      { label: "Nadi", value: "78 bpm", icon: "pulse" as const },
+      { label: "Suhu", value: "36.5C", icon: "temp" },
+      { label: "Tekanan darah", value: "130/85", icon: "bp" },
+      { label: "Nadi", value: "78 bpm", icon: "pulse" },
     ],
   },
   "queue-6": {
@@ -334,39 +349,35 @@ const snapshotSeed = {
     weight: "60 kg",
     lastVisit: "Kontrol batuk 2 bulan lalu",
     diagnosis: "Curiga infeksi paru kronik",
-    riskLevel: "high" as const,
+    riskLevel: "high",
     allergies: ["Debu"],
     medications: [
       { name: "Ambroxol", dosage: "30mg", frequency: "3x sehari" },
     ],
     redFlags: ["Batuk darah > 3 hari"],
     vitals: [
-      { label: "Suhu", value: "37.8°C", icon: "temp" as const },
-      { label: "Tekanan darah", value: "118/80", icon: "bp" as const },
-      { label: "Nadi", value: "96 bpm", icon: "pulse" as const },
+      { label: "Suhu", value: "37.8C", icon: "temp" },
+      { label: "Tekanan darah", value: "118/80", icon: "bp" },
+      { label: "Nadi", value: "96 bpm", icon: "pulse" },
     ],
   },
 };
-
 export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceProps) {
   const [queue, setQueue] = useState(queueSeed);
-  const [selectedId, setSelectedId] = useState(queueSeed[0].id);
+  const [selectedId, setSelectedId] = useState<QueueId>(queueSeed[0].id);
   const [isActive, setIsActive] = useState(false);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [draftMedications, setDraftMedications] = useState<DraftMedication[]>([]);
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
   const { toast } = useToast();
-
   const selectedSnapshot = snapshotSeed[selectedId];
   const messages = messagesSeed[selectedId] ?? [];
   const orders = ordersSeed[selectedId] ?? [];
-
   const selectedPatient = useMemo(
     () => queue.find((item) => item.id === selectedId),
     [queue, selectedId],
   );
-
   const handleSelectQueueItem = useCallback(
     (id: string) => {
       if (id !== selectedId) {
@@ -374,48 +385,48 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
         setDraftStatus("idle");
         setIsDraftOpen(false);
       }
-      setQueue((current) => {
-        const next = current.map((item) => {
+      setQueue((current) =>
+        current.map((item) => {
           if (item.id === id) {
+            const nextStatus: QueueStatus =
+              isActive && item.status !== "done" ? "in-progress" : item.status;
             return {
               ...item,
-              status: isActive && item.status !== "done" ? "in-progress" : item.status,
+              status: nextStatus,
             };
           }
           if (isActive && item.status === "in-progress") {
-            return { ...item, status: "waiting" };
+            const resetStatus: QueueStatus = "waiting";
+            return { ...item, status: resetStatus };
           }
           return item;
-        });
-        return next;
-      });
+        }),
+      );
       setSelectedId(id);
     },
     [isActive, selectedId],
   );
-
   const handleToggleConsultation = useCallback(() => {
     setIsActive((prev) => {
       const next = !prev;
       setQueue((current) =>
         current.map((item) => {
           if (item.id === selectedId) {
+            const activeStatus: QueueStatus = next ? "in-progress" : "done";
             return {
               ...item,
-              status: next ? "in-progress" : "done",
+              status: activeStatus,
               waitTime: next ? "Sedang ditangani" : "Selesai",
               lastInteraction: next ? "Baru saja" : "1 menit lalu",
             };
           }
-          if (next) {
-            return item.status === "in-progress"
-              ? { ...item, status: "waiting", waitTime: "Menunggu giliran" }
-              : item;
+          if (next && item.status === "in-progress") {
+            const queuedStatus: QueueStatus = "waiting";
+            return { ...item, status: queuedStatus, waitTime: "Menunggu giliran" };
           }
           return item;
         }),
       );
-
       if (next) {
         toast({
           title: "Konsultasi dimulai",
@@ -428,11 +439,9 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
         });
         setIsDraftOpen(false);
       }
-
       return next;
     });
   }, [selectedId, toast]);
-
   const handleCreateDraft = useCallback(() => {
     setIsDraftOpen(true);
     setDraftStatus((current) => (current === "idle" ? "draft" : current));
@@ -441,7 +450,6 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
       description: "Tambahkan obat dan sesuaikan instruksi sebelum dikirim.",
     });
   }, [toast]);
-
   const handleAddMedication = useCallback((option: MedicationOption) => {
     const newMedication: DraftMedication = {
       id: `draft-${Date.now()}-${Math.round(Math.random() * 1000)}`,
@@ -456,17 +464,14 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
       durationIsCustom: false,
       notes: "",
     };
-
     setDraftMedications((current) => [...current, newMedication]);
     setDraftStatus("draft");
   }, []);
-
   const handleUpdateMedication = useCallback((updated: DraftMedication) => {
     setDraftMedications((current) =>
       current.map((medication) => (medication.id === updated.id ? updated : medication)),
     );
   }, []);
-
   const handleRemoveMedication = useCallback((id: string) => {
     setDraftMedications((current) => {
       const next = current.filter((medication) => medication.id !== id);
@@ -476,7 +481,6 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
       return next;
     });
   }, []);
-
   const handleSaveDraft = useCallback(() => {
     setDraftStatus("draft");
     toast({
@@ -499,7 +503,6 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
       });
     }
   }, [toast, selectedSnapshot, draftMedications]);
-
   const handleSendForApproval = useCallback(() => {
     setDraftStatus("awaiting_approval");
     toast({
@@ -522,19 +525,15 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
       });
     }
   }, [toast, selectedSnapshot, draftMedications]);
-
   const handleCancelDraft = useCallback(() => {
     setIsDraftOpen(false);
   }, []);
-
   const bannerSeverity: RedFlagSeverity =
     selectedSnapshot?.riskLevel === "emergency" ? "danger" : "warning";
-
   const shouldShowBanner =
     isActive &&
     selectedSnapshot?.riskLevel === "emergency" &&
     !dismissedAlerts.includes(selectedId);
-
   const patientBanner = selectedSnapshot
     ? {
         key: selectedId,
@@ -549,7 +548,6 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
           ),
       }
     : undefined;
-
   // Subscribe to consultation events (e.g., add medication opens Draft Prescription)
   useEffect(() => {
     const off = consultationBus.on("prescription:add", (payload) => {
@@ -572,12 +570,11 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
       off();
     };
   }, [handleAddMedication]);
-
   return (
     <motion.div
       layout
       className="flex flex-col gap-4"
-      transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+      transition={{ duration: 0.16, ease: standardEase }}
     >
       <HeaderActions
         isActive={isActive}

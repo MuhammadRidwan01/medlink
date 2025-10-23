@@ -96,5 +96,3 @@ export function QuickReplies({ options, onSelect, disabled }: QuickRepliesProps)
     </div>
   );
 }
-
-export type { QuickReply };

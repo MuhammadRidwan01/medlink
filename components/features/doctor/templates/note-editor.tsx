@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, cubicBezier, motion } from "framer-motion";
 import { Save, StickyNote, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import type { NoteTemplate } from "./mock-data";
@@ -23,6 +23,7 @@ type NoteEditorProps = {
 };
 
 export function NoteEditor({ template, onClose, onSaveDraft }: NoteEditorProps) {
+  const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
   const { toast } = useToast();
   const [content, setContent] = useState<Record<SectionKey, string>>({
     cc: "",
@@ -76,7 +77,7 @@ export function NoteEditor({ template, onClose, onSaveDraft }: NoteEditorProps) 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+        transition={{ duration: 0.16, ease: standardEase }}
         className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
@@ -86,7 +87,7 @@ export function NoteEditor({ template, onClose, onSaveDraft }: NoteEditorProps) 
         initial={{ x: "100%" }}
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
-        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+        transition={{ duration: 0.16, ease: standardEase }}
         className="fixed inset-y-0 right-0 z-50 w-full max-w-3xl border-l border-border/60 bg-background shadow-xl"
         role="dialog"
         aria-modal="true"
@@ -104,7 +105,7 @@ export function NoteEditor({ template, onClose, onSaveDraft }: NoteEditorProps) 
             <button
               type="button"
               onClick={onClose}
-              className="tap-target rounded-full border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted/60"
+              className="tap-target rounded-full border border-border/60 bg-muted/40 p-2 text-muted-foreground transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-muted/60"
               aria-label="Tutup editor catatan"
             >
               <X className="h-4 w-4" aria-hidden="true" />
@@ -129,7 +130,7 @@ export function NoteEditor({ template, onClose, onSaveDraft }: NoteEditorProps) 
                     onChange={(event) =>
                       setContent((prev) => ({ ...prev, [sectionKey]: event.target.value }))
                     }
-                    className="tap-target min-h-[120px] w-full rounded-card border border-border/60 bg-muted/20 px-3 py-2 text-sm text-foreground outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
+                    className="tap-target min-h-[120px] w-full rounded-card border border-border/60 bg-muted/20 px-3 py-2 text-sm text-foreground outline-none transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={label}
                   />
                 </section>
@@ -151,7 +152,7 @@ export function NoteEditor({ template, onClose, onSaveDraft }: NoteEditorProps) 
             <button
               type="button"
               onClick={handleSave}
-              className="tap-target inline-flex items-center gap-2 rounded-button bg-gradient-to-r from-primary to-primary-dark px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl active:scale-[0.98]"
+              className="tap-target inline-flex items-center gap-2 rounded-button bg-gradient-to-r from-primary to-primary-dark px-4 py-3 text-sm font-semibold text-white shadow-lg transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:shadow-xl active:scale-[0.98]"
             >
               <Save className="h-4 w-4" aria-hidden="true" />
               Simpan sebagai draft

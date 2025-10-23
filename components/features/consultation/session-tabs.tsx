@@ -1,5 +1,5 @@
 "use client";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, cubicBezier, motion } from "framer-motion";
 import { ClipboardList, FileText, MessageSquareText } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -23,10 +23,12 @@ const tabDefs = [
 
 type TabValue = (typeof tabDefs)[number]["value"];
 
+const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
+
 export function SessionTabs({ messages, ordersSeed = [], snapshot, sessionActive }: ConsultationTabsProps) {
   const [active, setActive] = useState<TabValue>("messages");
   const indicatorLayout = useMemo(
-    () => ({ layoutId: "consultation-tab-underline", transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] } }),
+    () => ({ layoutId: "consultation-tab-underline", transition: { duration: 0.16, ease: standardEase } }),
     [],
   );
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -57,14 +59,16 @@ export function SessionTabs({ messages, ordersSeed = [], snapshot, sessionActive
           return (
             <button
               key={tab.value}
-              ref={(el) => (buttonRefs.current[tab.value] = el)}
+              ref={(el) => {
+                buttonRefs.current[tab.value] = el;
+              }}
               onClick={() => setActive(tab.value)}
               role="tab"
               aria-selected={isActive}
               aria-controls={`panel-${tab.value}`}
               id={`tab-${tab.value}`}
               className={cn(
-                "relative flex-1 overflow-hidden rounded-button px-4 py-2 text-sm font-semibold transition-all duration-fast ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "relative flex-1 overflow-hidden rounded-button px-4 py-2 text-sm font-semibold transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 "tap-target",
                 isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground/80",
               )}

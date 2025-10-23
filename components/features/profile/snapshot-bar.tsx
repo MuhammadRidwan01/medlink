@@ -1,18 +1,19 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Capsule, Pill } from "lucide-react";
+import { cubicBezier, motion } from "framer-motion";
+import { Pill, ShieldAlert } from "lucide-react";
 import { useProfileSnapshot } from "./store";
 
 export function SnapshotBar() {
   const { topAllergies, topMeds } = useProfileSnapshot();
+  const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
 
   return (
     <motion.section
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+      transition={{ duration: 0.16, ease: standardEase }}
       className="rounded-card border border-border/60 bg-card p-4 shadow-sm"
     >
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -29,7 +30,7 @@ export function SnapshotBar() {
             key={allergy.id}
             className="inline-flex items-center gap-2 rounded-badge border border-danger/20 bg-danger/5 px-3 py-1 text-danger"
           >
-            <Capsule className="h-3.5 w-3.5" aria-hidden="true" />
+            <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
             {allergy.substance}
           </span>
         ))}

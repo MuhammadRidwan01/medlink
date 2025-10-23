@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, cubicBezier, motion } from "framer-motion";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { AlarmClock, Clock, Minus, Plus, Sunrise, Sun, Sunset, MoonStar, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,7 @@ function formatTime(date: Date) {
 }
 
 export function ReminderSheet({ open, onOpenChange, onSave, anchorLabel, initialTime, initialOffset }: ReminderSheetProps) {
+  const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
   const [selectedTime, setSelectedTime] = useState(initialTime);
   const [offsetMinutes, setOffsetMinutes] = useState(initialOffset);
 
@@ -88,7 +89,7 @@ export function ReminderSheet({ open, onOpenChange, onSave, anchorLabel, initial
       initial={{ y: "100%" }}
       animate={{ y: 0 }}
       exit={{ y: "100%" }}
-      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+      transition={{ duration: 0.16, ease: standardEase }}
       className="pointer-events-auto mt-auto w-full max-w-md rounded-t-[24px] border border-border/60 bg-background shadow-xl"
     >
       <div className="flex flex-col gap-5 px-6 pb-6 pt-4">
@@ -105,7 +106,7 @@ export function ReminderSheet({ open, onOpenChange, onSave, anchorLabel, initial
           <Dialog.Close asChild>
             <button
               type="button"
-              className="tap-target rounded-full border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted/60"
+              className="tap-target rounded-full border border-border/60 bg-muted/40 p-2 text-muted-foreground transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-muted/60"
               aria-label="Tutup pengingat"
             >
               <X className="h-4 w-4" aria-hidden="true" />
@@ -127,7 +128,7 @@ export function ReminderSheet({ open, onOpenChange, onSave, anchorLabel, initial
                   type="button"
                   onClick={() => setSelectedTime(preset.value)}
                   className={cn(
-                    "tap-target inline-flex items-center justify-between gap-2 rounded-card border px-3 py-2 text-sm font-semibold transition-all duration-fast ease-out",
+                    "tap-target inline-flex items-center justify-between gap-2 rounded-card border px-3 py-2 text-sm font-semibold transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
                     isActive
                       ? "border-primary bg-primary/10 text-primary shadow-sm"
                       : "border-border/70 bg-muted/40 text-muted-foreground hover:border-primary/30",
@@ -149,7 +150,7 @@ export function ReminderSheet({ open, onOpenChange, onSave, anchorLabel, initial
               type="time"
               value={selectedTime}
               onChange={(event) => setSelectedTime(event.target.value)}
-              className="tap-target flex-1 rounded-input border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
+              className="tap-target flex-1 rounded-input border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Waktu pengingat kustom"
             />
           </div>
@@ -165,7 +166,7 @@ export function ReminderSheet({ open, onOpenChange, onSave, anchorLabel, initial
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="tap-target rounded-button border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted/60"
+              className="tap-target rounded-button border border-border/60 bg-muted/40 p-2 text-muted-foreground transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-muted/60"
               onClick={() => handleOffsetChange(-5)}
               aria-label="Kurangi offset 5 menit"
             >
@@ -175,12 +176,12 @@ export function ReminderSheet({ open, onOpenChange, onSave, anchorLabel, initial
               type="number"
               value={offsetMinutes}
               onChange={handleOffsetInput}
-              className="tap-target w-24 rounded-input border border-border/60 bg-background px-3 py-2 text-center text-sm shadow-sm transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
+              className="tap-target w-24 rounded-input border border-border/60 bg-background px-3 py-2 text-center text-sm shadow-sm transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Offset dalam menit"
             />
             <button
               type="button"
-              className="tap-target rounded-button border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted/60"
+              className="tap-target rounded-button border border-border/60 bg-muted/40 p-2 text-muted-foreground transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-muted/60"
               onClick={() => handleOffsetChange(5)}
               aria-label="Tambah offset 5 menit"
             >
@@ -217,14 +218,14 @@ export function ReminderSheet({ open, onOpenChange, onSave, anchorLabel, initial
               onSave(selectedTime, offsetMinutes);
               onOpenChange(false);
             }}
-            className="tap-target inline-flex items-center justify-center rounded-button bg-primary-gradient px-4 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all duration-fast ease-out hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="tap-target inline-flex items-center justify-center rounded-button bg-primary-gradient px-4 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             Simpan pengingat
           </button>
           <Dialog.Close asChild>
             <button
               type="button"
-              className="tap-target inline-flex items-center justify-center rounded-button border border-border/70 bg-muted/40 px-4 py-3 text-sm font-semibold text-muted-foreground transition-all duration-fast ease-out hover:bg-muted/60"
+              className="tap-target inline-flex items-center justify-center rounded-button border border-border/70 bg-muted/40 px-4 py-3 text-sm font-semibold text-muted-foreground transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-muted/60"
             >
               Batal
             </button>
@@ -245,7 +246,7 @@ export function ReminderSheet({ open, onOpenChange, onSave, anchorLabel, initial
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                transition={{ duration: 0.16, ease: standardEase }}
                 className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
               />
             </Dialog.Overlay>

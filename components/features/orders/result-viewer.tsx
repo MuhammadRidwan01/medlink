@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, cubicBezier, motion } from "framer-motion";
 import { ClipboardList, Image as ImageIcon, Timer } from "lucide-react";
 import type { ClinicalOrder } from "./clinical-store";
 import { ImageViewer } from "./image-viewer";
 import { ReportCard } from "./report-card";
+
+const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
 
 type Props = {
   order: ClinicalOrder;
@@ -14,7 +16,7 @@ type Props = {
 
 export function ResultViewer({ order, onUpdateReport }: Props) {
   const [tab, setTab] = useState<"image" | "report" | "timeline">(order.kind === "imaging" ? "image" : "report");
-  const indicator = useMemo(() => ({ layoutId: "result-tab", transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] } }), []);
+  const indicator = useMemo(() => ({ layoutId: "result-tab", transition: { duration: 0.16, ease: standardEase } }), []);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(280px,0.9fr)_minmax(0,1.1fr)]">
@@ -73,7 +75,7 @@ export function ResultViewer({ order, onUpdateReport }: Props) {
         <div className="mt-4 flex-1 overflow-hidden rounded-card border border-border/60 bg-card p-4 shadow-sm">
           <AnimatePresence mode="wait" initial={false}>
             {tab === "image" && order.kind === "imaging" ? (
-              <motion.div key="image" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }} className="h-full">
+              <motion.div key="image" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.16, ease: standardEase }} className="h-full">
                 {order.images?.length ? (
                   <ImageViewer src={order.images[0]!} />
                 ) : (
@@ -82,12 +84,12 @@ export function ResultViewer({ order, onUpdateReport }: Props) {
               </motion.div>
             ) : null}
             {tab === "report" ? (
-              <motion.div key="report" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+              <motion.div key="report" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.16, ease: standardEase }}>
                 <ReportCard aiSummary={order.aiSummary} initialReport={order.report} onChange={onUpdateReport} />
               </motion.div>
             ) : null}
             {tab === "timeline" ? (
-              <motion.div key="timeline" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }} className="space-y-2 text-sm">
+              <motion.div key="timeline" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.16, ease: standardEase }} className="space-y-2 text-sm">
                 {order.timeline?.map((t) => (
                   <div key={t.id} className="rounded-card border border-border/60 bg-muted/30 p-2">
                     <p className="font-semibold text-foreground">{t.label}</p>

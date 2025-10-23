@@ -64,7 +64,7 @@ type PaymentStore = {
 };
 
 const storage = typeof window !== "undefined"
-  ? createJSONStorage<PaymentStore>(() => window.sessionStorage)
+  ? createJSONStorage<Partial<PaymentStore>>(() => window.sessionStorage)
   : undefined;
 
 export const usePaymentStore = create<PaymentStore>()(
@@ -177,7 +177,7 @@ export const usePaymentStore = create<PaymentStore>()(
       {
         name: "payment-store",
         storage,
-        partialize: (state) => ({
+        partialize: (state): Partial<PaymentStore> => ({
           orders: state.orders,
           activeOrderId: state.activeOrderId,
           developerOutcome: state.developerOutcome,

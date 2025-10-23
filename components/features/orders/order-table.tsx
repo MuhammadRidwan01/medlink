@@ -22,16 +22,23 @@ export function OrderTable({ orders, onOpen }: Props) {
 
   const sorted = useMemo(() => {
     const next = orders.slice();
-    next.sort((a, b) => {
-      let va: string | number = "";
-      let vb: string | number = "";
-      if (sortKey === "date") {
-        va = new Date(a.date).getTime();
-        vb = new Date(b.date).getTime();
-      } else {
-        va = (a as Record<string, string | number>)[sortKey] as string | number;
-        vb = (b as Record<string, string | number>)[sortKey] as string | number;
+    const valueFor = (order: ClinicalOrder, key: SortKey): string | number => {
+      switch (key) {
+        case "kind":
+          return order.kind;
+        case "patient":
+          return order.patient;
+        case "status":
+          return order.status;
+        case "date":
+          return new Date(order.date).getTime();
+        default:
+          return "";
       }
+    };
+    next.sort((a, b) => {
+      const va = valueFor(a, sortKey);
+      const vb = valueFor(b, sortKey);
       if (va < vb) return dir === "asc" ? -1 : 1;
       if (va > vb) return dir === "asc" ? 1 : -1;
       return 0;

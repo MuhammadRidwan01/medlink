@@ -102,11 +102,11 @@ const config: Config = {
             lineHeight: "16px",
             letterSpacing: "0.05em",
             fontWeight: "500",
-            textTransform: "uppercase",
           },
         ],
       },
       transitionDuration: {
+        160: "160ms",
         fast: "var(--duration-fast)",
         normal: "var(--duration-normal)",
         slow: "var(--duration-slow)",

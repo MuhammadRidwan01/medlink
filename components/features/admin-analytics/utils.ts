@@ -58,17 +58,22 @@ export function generateSeries(range: DateRange, seed = 1) {
   return { labels, sessions, consults, gmv };
 }
 
-export function detectAnomaly(values: number[]) {
+type AnomalyDetection =
+  | { type: "spike"; index: number; value: number }
+  | { type: "drop"; index: number; value: number }
+  | null;
+
+export function detectAnomaly(values: number[]): AnomalyDetection {
   // simple spike detection: value > mean + 2*std or < mean - 2*std
-  if (!values.length) return null as const;
+  if (!values.length) return null;
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
   const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
   const std = Math.sqrt(variance);
   for (let i = values.length - 1; i >= 0; i--) {
     const v = values[i]!;
-    if (v > mean + 2 * std) return { type: "spike" as const, index: i, value: v };
-    if (v < mean - 2 * std) return { type: "drop" as const, index: i, value: v };
+    if (v > mean + 2 * std) return { type: "spike", index: i, value: v };
+    if (v < mean - 2 * std) return { type: "drop", index: i, value: v };
   }
-  return null as const;
+  return null;
 }
 

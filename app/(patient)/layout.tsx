@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import {
   ActivitySquare,
   LayoutDashboard,
@@ -14,6 +14,7 @@ import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
 import { SessionGate } from "@/components/layout/session-gate";
 import { SessionSkeleton } from "@/components/layout/session-skeleton";
+import type { SidebarItem } from "@/components/layout/sidebar";
 
 const patientNav = [
   {
@@ -36,7 +37,7 @@ const patientNav = [
     label: "Marketplace",
     icon: ShoppingBag,
   },
-] as const;
+] satisfies SidebarItem[];
 
 export default function PatientLayout({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -57,7 +58,8 @@ export default function PatientLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <SessionGate allowedRoles={["patient"]} fallback={fallback}>
+    <Suspense fallback={fallback}>
+      <SessionGate allowedRoles={["patient"]} fallback={fallback}>
       <div className="relative flex min-h-screen flex-col bg-muted/40 md:bg-background">
         <Header
           title="Perawatan Pasien"
@@ -86,6 +88,7 @@ export default function PatientLayout({ children }: { children: ReactNode }) {
         <BottomNav items={patientNav} />
         <Fab href="/patient/triage" />
       </div>
-    </SessionGate>
+      </SessionGate>
+    </Suspense>
   );
 }

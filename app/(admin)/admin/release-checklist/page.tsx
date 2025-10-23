@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import type { MarketplaceProduct } from "@/components/features/marketplace/data";
 
 type Check = { id: string; label: string; pass: boolean | null; detail?: string };
 
@@ -29,8 +30,9 @@ async function checkDraftPrescriptionConflict(): Promise<Check> {
   try {
     const data = await import("@/components/features/marketplace/data");
     const { useMarketplaceCart } = await import("@/components/features/marketplace/store");
-    const prod = (data.MOCK_PRODUCTS || []).find((p: any) => Array.isArray(p.conflicts) && p.conflicts.length);
-    if (!prod)
+    const products: MarketplaceProduct[] = data.MOCK_PRODUCTS ?? [];
+    const productWithConflict = products.find((product): product is MarketplaceProduct & { conflicts: string[] } => Array.isArray(product.conflicts) && product.conflicts.length > 0);
+    if (!productWithConflict)
       return {
         id: "rx",
         label: "Draft Prescription interaction warning",
@@ -38,10 +40,10 @@ async function checkDraftPrescriptionConflict(): Promise<Check> {
         detail: "no product with conflicts",
       };
     const store = useMarketplaceCart.getState();
-    store.addItem(prod);
+    store.addItem(productWithConflict);
     const item = useMarketplaceCart
       .getState()
-      .items.find((i: { product: { id: string } }) => i.product.id === prod.id);
+      .items.find((cartItem) => cartItem.product.id === productWithConflict.id);
     const ok = Boolean(item && (item.conflicts?.length || 0) > 0);
     return { id: "rx", label: "Draft Prescription interaction warning", pass: ok };
   } catch (e) {

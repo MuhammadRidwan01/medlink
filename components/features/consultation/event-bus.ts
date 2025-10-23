@@ -20,20 +20,36 @@ type EventMap = {
 type Handler<T> = (payload: T) => void;
 
 class TinyBus {
-  private handlers: { [K in keyof EventMap]?: Set<Handler<EventMap[K]>> } = {};
+  private handlers: Partial<
+    Record<keyof EventMap, Set<Handler<EventMap[keyof EventMap]>>>
+  > = {};
 
   on<K extends keyof EventMap>(event: K, handler: Handler<EventMap[K]>) {
-    if (!this.handlers[event]) this.handlers[event] = new Set();
-    this.handlers[event]!.add(handler);
+    const existing =
+      (this.handlers[event] as Set<Handler<EventMap[K]>> | undefined) ??
+      new Set<Handler<EventMap[K]>>();
+    existing.add(handler);
+    this.handlers[event] = existing as Set<
+      Handler<EventMap[keyof EventMap]>
+    >;
     return () => this.off(event, handler);
   }
 
   off<K extends keyof EventMap>(event: K, handler: Handler<EventMap[K]>) {
-    this.handlers[event]?.delete(handler);
+    const existing = this.handlers[event] as
+      | Set<Handler<EventMap[K]>>
+      | undefined;
+    existing?.delete(handler);
+    if (existing && existing.size === 0) {
+      delete this.handlers[event];
+    }
   }
 
   emit<K extends keyof EventMap>(event: K, payload: EventMap[K]) {
-    this.handlers[event]?.forEach((h) => h(payload));
+    const existing = this.handlers[event] as
+      | Set<Handler<EventMap[K]>>
+      | undefined;
+    existing?.forEach((registeredHandler) => registeredHandler(payload));
   }
 }
 

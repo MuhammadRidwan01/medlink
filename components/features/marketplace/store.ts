@@ -232,7 +232,9 @@ function bindProfileSnapshotSubscription() {
   });
 }
 
-bindProfileSnapshotSubscription();
+if (typeof window !== "undefined") {
+  bindProfileSnapshotSubscription();
+}
 
 export { MOCK_PRODUCTS };
 
@@ -268,4 +270,3 @@ function createConflictSet(detail: SnapshotEventDetail) {
   set.add("warning");
   return set;
 }
-

@@ -1,6 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  Suspense,
+  type FormEvent,
+  useMemo,
+  useState,
+} from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -15,6 +20,14 @@ type LoginFormState = {
 };
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -27,7 +40,7 @@ export default function LoginPage() {
 
   const redirectTo = searchParams.get("redirect");
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isLoading) return;
 
@@ -99,7 +112,10 @@ export default function LoginPage() {
       </div>
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>
         <div className="space-y-2">
-          <label htmlFor="email" className="flex items-center gap-2 text-small font-medium text-muted-foreground">
+          <label
+            htmlFor="email"
+            className="flex items-center gap-2 text-small font-medium text-muted-foreground"
+          >
             <Mail className="h-4 w-4 text-primary" aria-hidden />
             Email
           </label>
@@ -121,7 +137,10 @@ export default function LoginPage() {
           </div>
         </div>
         <div className="space-y-2">
-          <label htmlFor="password" className="flex items-center gap-2 text-small font-medium text-muted-foreground">
+          <label
+            htmlFor="password"
+            className="flex items-center gap-2 text-small font-medium text-muted-foreground"
+          >
             <Lock className="h-4 w-4 text-primary" aria-hidden />
             Kata sandi
           </label>
@@ -151,7 +170,10 @@ export default function LoginPage() {
           </div>
         </div>
         {formError ? (
-          <p id="login-error" className="rounded-card border border-danger/20 bg-danger/10 px-3 py-2 text-small text-danger">
+          <p
+            id="login-error"
+            className="rounded-card border border-danger/20 bg-danger/10 px-3 py-2 text-small text-danger"
+          >
             {formError}
           </p>
         ) : null}
@@ -176,6 +198,20 @@ export default function LoginPage() {
           Daftar sekarang
         </Link>
       </motion.p>
+    </motion.div>
+  );
+}
+
+function LoginFallback() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+      className="space-y-6"
+    >
+      <div className="h-48 animate-pulse rounded-card border border-border/60 bg-muted/40" />
+      <div className="h-56 animate-pulse rounded-card border border-border/60 bg-muted/30" />
     </motion.div>
   );
 }

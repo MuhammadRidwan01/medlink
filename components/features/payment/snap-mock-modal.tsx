@@ -2,7 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Tabs from "@radix-ui/react-tabs";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, cubicBezier, motion } from "framer-motion";
 import Image from "next/image";
 import { useCallback, useState } from "react";
 import {
@@ -58,6 +58,7 @@ const channels: Array<{
 ];
 
 const virtualAccountCode = "8808801234567890";
+const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
 
 export function SnapMockModal({
   open,
@@ -69,6 +70,7 @@ export function SnapMockModal({
   onConfirmPayment,
   developerOutcomeLabel,
 }: SnapMockModalProps) {
+
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -99,7 +101,7 @@ export function SnapMockModal({
               <button
                 type="button"
                 onClick={handleCopy}
-                className="tap-target inline-flex items-center gap-2 rounded-button border border-primary/30 bg-card px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/10"
+                className="tap-target inline-flex items-center gap-2 rounded-button border border-primary/30 bg-card px-3 py-2 text-xs font-semibold text-primary transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-primary/10"
                 aria-label="Salin kode virtual account"
               >
                 {copied ? (
@@ -163,7 +165,7 @@ export function SnapMockModal({
                 <input
                   type="text"
                   placeholder="4242 4242 4242 4242"
-                  className="tap-target rounded-input border border-border/70 bg-card px-3 py-2 text-sm shadow-sm transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
+                  className="tap-target rounded-input border border-border/70 bg-card px-3 py-2 text-sm shadow-sm transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Nomor kartu kredit atau debit"
                 />
               </label>
@@ -172,7 +174,7 @@ export function SnapMockModal({
                 <input
                   type="text"
                   placeholder="Nama sesuai kartu"
-                  className="tap-target rounded-input border border-border/70 bg-card px-3 py-2 text-sm shadow-sm transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
+                  className="tap-target rounded-input border border-border/70 bg-card px-3 py-2 text-sm shadow-sm transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Nama pemilik kartu"
                 />
               </label>
@@ -181,7 +183,7 @@ export function SnapMockModal({
                 <input
                   type="text"
                   placeholder="MM/YY"
-                  className="tap-target rounded-input border border-border/70 bg-card px-3 py-2 text-sm shadow-sm transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
+                  className="tap-target rounded-input border border-border/70 bg-card px-3 py-2 text-sm shadow-sm transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Tanggal kadaluarsa kartu"
                 />
               </label>
@@ -190,7 +192,7 @@ export function SnapMockModal({
                 <input
                   type="password"
                   placeholder="123"
-                  className="tap-target rounded-input border border-border/70 bg-card px-3 py-2 text-sm shadow-sm transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
+                  className="tap-target rounded-input border border-border/70 bg-card px-3 py-2 text-sm shadow-sm transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Kode CVV"
                 />
               </label>
@@ -222,7 +224,7 @@ export function SnapMockModal({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                transition={{ duration: 0.16, ease: standardEase }}
               />
             </Dialog.Overlay>
             <Dialog.Content asChild forceMount>
@@ -235,7 +237,7 @@ export function SnapMockModal({
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                transition={{ duration: 0.16, ease: standardEase }}
               >
                 <div className="relative flex w-full max-w-2xl flex-col gap-4 rounded-[24px] border border-border/80 bg-background p-6 shadow-xl">
                   <header className="flex items-start justify-between gap-4">
@@ -244,8 +246,8 @@ export function SnapMockModal({
                         Midtrans Snap Mock
                       </Dialog.Title>
                       <Dialog.Description className="text-sm text-muted-foreground">
-                        Id pesanan <span className="font-semibold text-foreground">{order.id}</span>{" "}
-                        • Total {formatCurrency(order.total)}
+                        Id pesanan <span className="font-semibold text-foreground">{order.id}</span>
+                        {" - "}Total {formatCurrency(order.total)}
                       </Dialog.Description>
                       <p className="mt-1 text-xs text-muted-foreground">
                         Developer override: {developerOutcomeLabel}
@@ -254,7 +256,7 @@ export function SnapMockModal({
                     <Dialog.Close asChild>
                       <button
                         type="button"
-                        className="tap-target rounded-full border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted/60"
+                        className="tap-target rounded-full border border-border/60 bg-muted/40 p-2 text-muted-foreground transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:bg-muted/60"
                         aria-label="Tutup dialog pembayaran"
                       >
                         <X className="h-4 w-4" aria-hidden="true" />
@@ -270,7 +272,7 @@ export function SnapMockModal({
 
                   <Tabs.Root
                     value={selectedChannel}
-                    onValueChange={(value) => onSelectChannel(value as PaymentChannel)}
+                    onValueChange={(value: string) => onSelectChannel(value as PaymentChannel)}
                     className="flex flex-col gap-4"
                   >
                     <Tabs.List
@@ -285,7 +287,7 @@ export function SnapMockModal({
                             key={channel.id}
                             value={channel.id}
                             className={cn(
-                              "tap-target inline-flex flex-1 min-w-[140px] items-center gap-2 rounded-card border px-3 py-2 text-sm font-semibold transition-all duration-fast ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                              "tap-target inline-flex flex-1 min-w-[140px] items-center gap-2 rounded-card border px-3 py-2 text-sm font-semibold transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                               isActive
                                 ? "border-primary bg-primary/10 text-primary shadow-sm"
                                 : "border-transparent bg-card text-muted-foreground hover:border-primary/30 hover:text-primary",
@@ -315,7 +317,7 @@ export function SnapMockModal({
                       onClick={onConfirmPayment}
                       disabled={isConfirmDisabled}
                       className={cn(
-                        "tap-target inline-flex w-full items-center justify-center rounded-button bg-gradient-to-r from-primary to-primary-dark px-4 py-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        "tap-target inline-flex w-full items-center justify-center rounded-button bg-gradient-to-r from-primary to-primary-dark px-4 py-3 text-sm font-semibold text-white shadow-md transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                         isConfirmDisabled
                           ? "cursor-not-allowed opacity-70"
                           : "hover:shadow-lg active:scale-[0.98]",

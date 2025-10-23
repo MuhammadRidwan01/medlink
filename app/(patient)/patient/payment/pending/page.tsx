@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Clock, CreditCard } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
@@ -8,6 +8,14 @@ import { PaymentStatusIndicator } from "@/components/features/payment/payment-st
 import { usePaymentStore } from "@/components/features/payment/store";
 
 export default function PaymentPendingPage() {
+  return (
+    <Suspense fallback={<PaymentPendingFallback />}>
+      <PaymentPendingContent />
+    </Suspense>
+  );
+}
+
+function PaymentPendingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fallbackId = usePaymentStore((state) => state.activeOrderId);
@@ -66,6 +74,17 @@ export default function PaymentPendingPage() {
           Pantau dari dashboard
         </button>
       </div>
+    </PageShell>
+  );
+}
+
+function PaymentPendingFallback() {
+  return (
+    <PageShell
+      title="Memeriksa status pembayaran"
+      subtitle="Harap tunggu sebentar, kami sedang memuat transaksi Anda."
+    >
+      <div className="h-32 animate-pulse rounded-card border border-border/60 bg-muted/40" />
     </PageShell>
   );
 }

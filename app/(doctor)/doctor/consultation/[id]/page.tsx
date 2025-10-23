@@ -1,16 +1,24 @@
+import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/page-shell";
 import { ConsultationWorkspace } from "@/components/features/doctor/consultation-workspace";
 
-type ConsultationDetailPageProps = {
-  params: {
-    id: string;
-  };
+type ConsultationDetailPageParams = {
+  id: string;
 };
 
-export default function ConsultationDetailPage({
+type ConsultationDetailPageProps = {
+  params?: Promise<ConsultationDetailPageParams>;
+};
+
+export default async function ConsultationDetailPage({
   params,
 }: ConsultationDetailPageProps) {
-  const { id } = params;
+  const resolvedParams = params ? await params : undefined;
+  const id = resolvedParams?.id;
+
+  if (!id) {
+    notFound();
+  }
 
   return (
     <PageShell

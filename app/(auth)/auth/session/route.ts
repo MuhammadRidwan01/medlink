@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -51,10 +52,10 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   try {
-    const response = NextResponse.json({ ok: true });
-    response.cookies.delete(ACCESS_TOKEN_COOKIE, { path: "/" });
-    response.cookies.delete(REFRESH_TOKEN_COOKIE, { path: "/" });
-    return response;
+    const cookieStore = await cookies();
+    cookieStore.delete({ name: ACCESS_TOKEN_COOKIE, path: "/" });
+    cookieStore.delete({ name: REFRESH_TOKEN_COOKIE, path: "/" });
+    return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[auth/session] failed to clear cookies", error);
     return NextResponse.json({ ok: false }, { status: 500 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LayoutDashboard, PillBottle } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
@@ -12,6 +12,14 @@ import { FeedbackPrompt } from "@/components/features/feedback/feedback-prompt";
 import { usePaymentStore } from "@/components/features/payment/store";
 
 export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={<PaymentSuccessFallback />}>
+      <PaymentSuccessContent />
+    </Suspense>
+  );
+}
+
+function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fallbackOrderId = usePaymentStore((state) => state.activeOrderId);
@@ -77,6 +85,17 @@ export default function PaymentSuccessPage() {
           Lihat jadwal obat
         </button>
       </div>
+    </PageShell>
+  );
+}
+
+function PaymentSuccessFallback() {
+  return (
+    <PageShell
+      title="Menyiapkan bukti pembayaran"
+      subtitle="Mengambil detail transaksi terakhir Anda."
+    >
+      <div className="h-32 animate-pulse rounded-card border border-border/60 bg-muted/40" />
     </PageShell>
   );
 }

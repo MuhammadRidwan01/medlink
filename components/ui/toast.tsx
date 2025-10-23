@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const ToastProvider = ToastPrimitives.Provider;
 const ToastViewport = React.forwardRef<
-  HTMLDivElement,
+  HTMLOListElement,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Viewport
@@ -21,7 +21,7 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 
 const Toast = React.forwardRef<
-  HTMLDivElement,
+  HTMLLIElement,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root>
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Root
@@ -98,4 +98,3 @@ export {
   ToastAction,
   ToastClose,
 };
-

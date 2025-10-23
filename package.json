@@ -7,13 +7,16 @@
                     "build":  "next build",
                     "start":  "next start",
                     "lint":  "next lint",
-                    "typecheck": "tsc -p tsconfig.json --noEmit",
+                    "typecheck": "tsc --noEmit",
+                    "analyze": "cross-env ANALYZE=true next build",
                     "seed": "tsx scripts/seeds.ts",
                     "reset": "tsx scripts/reset.ts",
                     "verify": "npm run lint && npm run typecheck"
                 },
     "dependencies":  {
                          "@radix-ui/react-slot":  "^1.2.3",
+                         "@radix-ui/react-dialog": "^1.1.4",
+                         "@radix-ui/react-tabs": "^1.1.2",
                          "@radix-ui/react-toast":  "^1.2.15",
                          "@supabase/auth-helpers-nextjs":  "^0.10.0",
                          "@supabase/supabase-js":  "^2.76.1",
@@ -25,7 +28,8 @@
                          "react":  "19.0.0-rc-65a56d0e-20241020",
                          "react-dom":  "19.0.0-rc-65a56d0e-20241020",
                          "tailwind-merge":  "^3.3.1",
-                         "tailwindcss-animate":  "^1.0.7"
+                         "tailwindcss-animate":  "^1.0.7",
+                         "zustand":  "^4.5.4"
                      },
     "devDependencies":  {
                             "@types/node":  "^20",
@@ -34,6 +38,7 @@
                             "eslint":  "^8",
                             "eslint-config-next":  "15.0.0",
                             "postcss":  "^8",
+                            "cross-env": "^7.0.3",
                             "tailwindcss":  "^3.4.1",
                             "typescript":  "^5",
                             "@next/bundle-analyzer":  "^15.0.0",

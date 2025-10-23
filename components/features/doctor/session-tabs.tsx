@@ -1,7 +1,7 @@
 "use client";
 
 import * as Tabs from "@radix-ui/react-tabs";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, cubicBezier, motion } from "framer-motion";
 import { ClipboardList, FileText, MessageSquareText } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,8 @@ const tabs = [
   { value: "orders", label: "Orders", icon: ClipboardList },
 ];
 
+const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
+
 export function SessionTabs({ messages, notes, orders }: SessionTabsProps) {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]["value"]>("messages");
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -51,7 +53,7 @@ export function SessionTabs({ messages, notes, orders }: SessionTabsProps) {
   const indicatorLayout = useMemo(
     () => ({
       layoutId: "session-tab-indicator",
-      transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] },
+      transition: { duration: 0.16, ease: standardEase },
     }),
     [],
   );
@@ -59,7 +61,7 @@ export function SessionTabs({ messages, notes, orders }: SessionTabsProps) {
   return (
     <Tabs.Root
       value={activeTab}
-      onValueChange={(value) => setActiveTab(value as typeof activeTab)}
+      onValueChange={(value: string) => setActiveTab(value as typeof activeTab)}
       className="flex h-full flex-col"
     >
       <Tabs.List
@@ -74,7 +76,7 @@ export function SessionTabs({ messages, notes, orders }: SessionTabsProps) {
               key={tab.value}
               value={tab.value}
               className={cn(
-                "relative flex-1 overflow-hidden rounded-button px-4 py-2 text-sm font-semibold transition-all duration-fast ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "relative flex-1 overflow-hidden rounded-button px-4 py-2 text-sm font-semibold transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 "tap-target",
                 isActive
                   ? "text-foreground"
@@ -111,7 +113,7 @@ export function SessionTabs({ messages, notes, orders }: SessionTabsProps) {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                transition={{ duration: 0.16, ease: standardEase }}
                 className="flex h-full flex-col gap-4 p-4"
               >
                 <div
@@ -142,13 +144,13 @@ export function SessionTabs({ messages, notes, orders }: SessionTabsProps) {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                transition={{ duration: 0.16, ease: standardEase }}
                 className="flex h-full flex-col gap-3 overflow-y-auto p-4"
               >
                 {notes.map((note) => (
                   <article
                     key={note.id}
-                    className="rounded-card border border-border/70 bg-muted/40 p-4 shadow-sm transition-all duration-fast ease-out hover:shadow-md"
+                    className="rounded-card border border-border/70 bg-muted/40 p-4 shadow-sm transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:shadow-md"
                   >
                     <header className="flex items-center justify-between text-sm font-semibold text-foreground">
                       <span>{note.title}</span>
@@ -175,19 +177,19 @@ export function SessionTabs({ messages, notes, orders }: SessionTabsProps) {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                transition={{ duration: 0.16, ease: standardEase }}
                 className="flex h-full flex-col gap-3 overflow-y-auto p-4"
               >
                 {orders.map((order) => (
                   <div
                     key={order.id}
-                    className="rounded-card border border-border/70 bg-card p-4 shadow-sm transition-all duration-fast ease-out hover:border-primary/30 hover:shadow-md"
+                    className="rounded-card border border-border/70 bg-card p-4 shadow-sm transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:border-primary/30 hover:shadow-md"
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-semibold text-foreground">{order.medication}</p>
                         <p className="text-xs text-muted-foreground">
-                          {order.dosage} • {order.frequency}
+                          {order.dosage}  -  {order.frequency}
                         </p>
                       </div>
                       <StatusPill status={order.status} />

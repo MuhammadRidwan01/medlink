@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { ClipboardList, LayoutDashboard, Users, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -9,6 +9,7 @@ import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
 import { SessionGate } from "@/components/layout/session-gate";
 import { SessionSkeleton } from "@/components/layout/session-skeleton";
+import type { SidebarItem } from "@/components/layout/sidebar";
 
 const doctorNav = [
   {
@@ -31,7 +32,7 @@ const doctorNav = [
     label: "Marketplace",
     icon: Users,
   },
-] as const;
+] satisfies SidebarItem[];
 
 export default function DoctorLayout({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -52,7 +53,8 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <SessionGate allowedRoles={["doctor"]} fallback={fallback}>
+    <Suspense fallback={fallback}>
+      <SessionGate allowedRoles={["doctor"]} fallback={fallback}>
       <div className="relative flex min-h-screen flex-col bg-muted/40 md:bg-background">
         <Header
           title="Panel Dokter"
@@ -80,6 +82,7 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
         <BottomNav items={doctorNav} />
         <Fab href="/doctor/queue" label="Lihat Antrian" />
       </div>
-    </SessionGate>
+      </SessionGate>
+    </Suspense>
   );
 }

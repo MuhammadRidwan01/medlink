@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, cubicBezier, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Pill, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -69,6 +69,8 @@ const INTERACTION_RULES: InteractionRule[] = [
   },
 ];
 
+const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
+
 export function DraftPrescriptionSheet({
   open,
   onOpenChange,
@@ -119,7 +121,7 @@ export function DraftPrescriptionSheet({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.16, ease: standardEase }}
             onClick={() => onOpenChange(false)}
             aria-hidden="true"
           />
@@ -132,7 +134,7 @@ export function DraftPrescriptionSheet({
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.16, ease: standardEase }}
           >
             <div className="flex h-full flex-col">
               <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-background px-6 py-4">
@@ -281,7 +283,7 @@ export function DraftPrescriptionSheet({
                       onCancel();
                       onOpenChange(false);
                     }}
-                    className="tap-target inline-flex items-center justify-center gap-2 rounded-button border border-border/70 bg-muted/40 px-4 py-2 text-sm font-semibold text-muted-foreground transition-all duration-fast ease-out hover:border-border/50 hover:bg-muted/60"
+                    className="tap-target inline-flex items-center justify-center gap-2 rounded-button border border-border/70 bg-muted/40 px-4 py-2 text-sm font-semibold text-muted-foreground transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:border-border/50 hover:bg-muted/60"
                   >
                     Batal
                   </motion.button>
@@ -290,7 +292,7 @@ export function DraftPrescriptionSheet({
                       type="button"
                       whileTap={{ scale: 0.98 }}
                       onClick={onSaveDraft}
-                      className="tap-target inline-flex items-center justify-center gap-2 rounded-button border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-all duration-fast ease-out hover:border-primary/40 hover:bg-primary/20"
+                      className="tap-target inline-flex items-center justify-center gap-2 rounded-button border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:border-primary/40 hover:bg-primary/20"
                     >
                       Simpan Draf
                     </motion.button>
@@ -300,7 +302,7 @@ export function DraftPrescriptionSheet({
                       onClick={onSendForApproval}
                       disabled={!medications.length}
                       className={cn(
-                        "tap-target inline-flex items-center justify-center gap-2 rounded-button bg-primary-gradient px-5 py-2 text-sm font-semibold text-primary-foreground shadow-md transition-all duration-fast ease-out hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60",
+                        "tap-target inline-flex items-center justify-center gap-2 rounded-button bg-primary-gradient px-5 py-2 text-sm font-semibold text-primary-foreground shadow-md transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60",
                       )}
                     >
                       Kirim untuk Persetujuan
