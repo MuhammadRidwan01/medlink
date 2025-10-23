@@ -3,6 +3,15 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
+export type ProfileSummary = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  dob: string | null;
+  sex: string | null;
+  bloodType: string | null;
+};
+
 export type AllergySeverity = "mild" | "moderate" | "severe";
 
 export type Allergy = {
@@ -22,70 +31,367 @@ export type Medication = {
   status: MedicationStatus;
 };
 
-type ProfileState = {
-  allergies: Allergy[];
-  medications: Medication[];
-  updateAllergy: (allergy: Allergy) => void;
-  addAllergy: (allergy: Allergy) => void;
-  removeAllergy: (id: string) => void;
-  updateMedication: (med: Medication) => void;
-  addMedication: (med: Medication) => void;
-  removeMedication: (id: string) => void;
-  stopMedication: (id: string) => void;
-  hydrate: (payload: { allergies: Allergy[]; medications: Medication[] }) => void;
+type SnapshotApiResponse = {
+  profile: {
+    id: string;
+    email: string | null;
+    name: string | null;
+    dob: string | null;
+    sex: string | null;
+    blood_type: string | null;
+  } | null;
+  allergies: Array<{
+    id: number;
+    substance: string;
+    reaction: string | null;
+    severity: "mild" | "moderate" | "severe";
+  }>;
+  meds: Array<{
+    id: number;
+    name: string;
+    strength: string | null;
+    frequency: string | null;
+    status: "active" | "stopped";
+  }>;
 };
 
-const initialAllergies: Allergy[] = [
-  { id: "a1", substance: "Penisilin", reaction: "Ruam kulit", severity: "moderate" },
-  { id: "a2", substance: "Udang", reaction: "Sesak napas", severity: "severe" },
-  { id: "a3", substance: "Serbuk sari", reaction: "Rinitis", severity: "mild" },
-];
+type SnapshotMutation =
+  | {
+      entity: "allergy";
+      action: "upsert";
+      record: {
+        id?: number;
+        substance: string;
+        reaction?: string | null;
+        severity: AllergySeverity;
+      };
+    }
+  | {
+      entity: "allergy";
+      action: "delete";
+      id: number;
+    }
+  | {
+      entity: "med";
+      action: "upsert";
+      record: {
+        id?: number;
+        name: string;
+        strength?: string | null;
+        frequency?: string | null;
+        status?: MedicationStatus;
+      };
+    }
+  | {
+      entity: "med";
+      action: "delete";
+      id: number;
+    }
+  | {
+    entity: "med";
+    action: "status";
+    id: number;
+    status: MedicationStatus;
+  };
 
-const initialMeds: Medication[] = [
-  { id: "m1", name: "Metformin", strength: "850 mg", frequency: "2x sehari", status: "active" },
-  { id: "m2", name: "Atorvastatin", strength: "20 mg", frequency: "1x malam", status: "active" },
-  { id: "m3", name: "Salbutamol Inhaler", strength: "100 mcg", frequency: "Jika perlu", status: "active" },
-];
+type ProfileState = {
+  profile: ProfileSummary | null;
+  allergies: Allergy[];
+  medications: Medication[];
+  loading: boolean;
+  error: string | null;
+  hydrate: (payload: {
+    profile: ProfileSummary | null;
+    allergies: Allergy[];
+    medications: Medication[];
+  }) => void;
+  fetchSnapshot: () => Promise<void>;
+  addAllergy: (allergy: Allergy) => Promise<void>;
+  updateAllergy: (allergy: Allergy) => Promise<void>;
+  removeAllergy: (id: string) => Promise<void>;
+  addMedication: (med: Medication) => Promise<void>;
+  updateMedication: (med: Medication) => Promise<void>;
+  removeMedication: (id: string) => Promise<void>;
+  stopMedication: (id: string) => Promise<void>;
+};
+
+const API_ENDPOINT = "/api/profile/snapshot";
+
+const parseNumericId = (value: string): number | null => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const mapSnapshotResponse = (
+  payload: SnapshotApiResponse,
+): {
+  profile: ProfileSummary | null;
+  allergies: Allergy[];
+  medications: Medication[];
+} => ({
+  profile: payload.profile
+    ? {
+        id: payload.profile.id,
+        email: payload.profile.email,
+        name: payload.profile.name,
+        dob: payload.profile.dob,
+        sex: payload.profile.sex,
+        bloodType: payload.profile.blood_type,
+      }
+    : null,
+  allergies: payload.allergies.map((item) => ({
+    id: item.id.toString(),
+    substance: item.substance,
+    reaction: item.reaction ?? "",
+    severity: item.severity,
+  })),
+  medications: payload.meds.map((item) => ({
+    id: item.id.toString(),
+    name: item.name,
+    strength: item.strength ?? "",
+    frequency: item.frequency ?? "",
+    status: item.status,
+  })),
+});
+
+const mutateSnapshot = async (body: SnapshotMutation) => {
+  const response = await fetch(API_ENDPOINT, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    let message = "Gagal memperbarui snapshot profil.";
+    try {
+      const errorPayload = (await response.json()) as { message?: string };
+      if (errorPayload.message) {
+        message = errorPayload.message;
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
+    throw new Error(message);
+  }
+
+  return (await response.json()) as SnapshotApiResponse;
+};
+
+const fetchSnapshotFromServer = async () => {
+  const response = await fetch(API_ENDPOINT, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    let message = "Gagal memuat snapshot profil.";
+    try {
+      const errorPayload = (await response.json()) as { message?: string };
+      if (errorPayload.message) {
+        message = errorPayload.message;
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
+    throw new Error(message);
+  }
+
+  return (await response.json()) as SnapshotApiResponse;
+};
 
 export const useProfileStore = create<ProfileState>()(
   devtools((set) => ({
-    allergies: initialAllergies,
-    medications: initialMeds,
-    updateAllergy: (allergy) =>
-      set((state) => ({
-        allergies: state.allergies.map((item) => (item.id === allergy.id ? allergy : item)),
-      })),
-    addAllergy: (allergy) =>
-      set((state) => ({
-        allergies: [...state.allergies, allergy],
-      })),
-    removeAllergy: (id) =>
-      set((state) => ({
-        allergies: state.allergies.filter((item) => item.id !== id),
-      })),
-    updateMedication: (med) =>
-      set((state) => ({
-        medications: state.medications.map((item) => (item.id === med.id ? med : item)),
-      })),
-    addMedication: (med) =>
-      set((state) => ({
-        medications: [...state.medications, med],
-      })),
-    removeMedication: (id) =>
-      set((state) => ({
-        medications: state.medications.filter((item) => item.id !== id),
-      })),
-    stopMedication: (id) =>
-      set((state) => ({
-        medications: state.medications.map((item) =>
-          item.id === id ? { ...item, status: "stopped" } : item,
-        ),
-      })),
-    hydrate: ({ allergies, medications }) =>
+    profile: null,
+    allergies: [],
+    medications: [],
+    loading: false,
+    error: null,
+    hydrate: ({ profile, allergies, medications }) =>
       set(() => ({
+        profile,
         allergies,
         medications,
       })),
+    fetchSnapshot: async () => {
+      set((state) => ({ ...state, loading: true, error: null }));
+      try {
+        const snapshot = await fetchSnapshotFromServer();
+        const mapped = mapSnapshotResponse(snapshot);
+        set(() => ({
+          ...mapped,
+          loading: false,
+          error: null,
+        }));
+      } catch (error) {
+        console.error("[profile] failed to fetch snapshot", error);
+        set((state) => ({
+          ...state,
+          loading: false,
+          error: error instanceof Error ? error.message : "Gagal memuat snapshot.",
+        }));
+        throw error;
+      }
+    },
+    addAllergy: async (allergy) => {
+      set((state) => ({ ...state, loading: true, error: null }));
+      try {
+        const id = parseNumericId(allergy.id) ?? undefined;
+        const snapshot = await mutateSnapshot({
+          entity: "allergy",
+          action: "upsert",
+          record: {
+            id,
+            substance: allergy.substance.trim(),
+            reaction: allergy.reaction.trim() || null,
+            severity: allergy.severity,
+          },
+        });
+        const mapped = mapSnapshotResponse(snapshot);
+        set(() => ({
+          ...mapped,
+          loading: false,
+          error: null,
+        }));
+      } catch (error) {
+        console.error("[profile] failed to add allergy", error);
+        set((state) => ({
+          ...state,
+          loading: false,
+          error: error instanceof Error ? error.message : "Gagal menyimpan alergi.",
+        }));
+        throw error;
+      }
+    },
+    updateAllergy: async (allergy) => {
+      await useProfileStore.getState().addAllergy(allergy);
+    },
+    removeAllergy: async (id) => {
+      const numericId = parseNumericId(id);
+      if (numericId === null) {
+        await useProfileStore.getState().fetchSnapshot();
+        return;
+      }
+
+      set((state) => ({ ...state, loading: true, error: null }));
+      try {
+        const snapshot = await mutateSnapshot({
+          entity: "allergy",
+          action: "delete",
+          id: numericId,
+        });
+        const mapped = mapSnapshotResponse(snapshot);
+        set(() => ({
+          ...mapped,
+          loading: false,
+          error: null,
+        }));
+      } catch (error) {
+        console.error("[profile] failed to remove allergy", error);
+        set((state) => ({
+          ...state,
+          loading: false,
+          error: error instanceof Error ? error.message : "Gagal menghapus alergi.",
+        }));
+        throw error;
+      }
+    },
+    addMedication: async (med) => {
+      set((state) => ({ ...state, loading: true, error: null }));
+      try {
+        const id = parseNumericId(med.id) ?? undefined;
+        const snapshot = await mutateSnapshot({
+          entity: "med",
+          action: "upsert",
+          record: {
+            id,
+            name: med.name.trim(),
+            strength: med.strength.trim() || null,
+            frequency: med.frequency.trim() || null,
+            status: med.status,
+          },
+        });
+        const mapped = mapSnapshotResponse(snapshot);
+        set(() => ({
+          ...mapped,
+          loading: false,
+          error: null,
+        }));
+      } catch (error) {
+        console.error("[profile] failed to add medication", error);
+        set((state) => ({
+          ...state,
+          loading: false,
+          error: error instanceof Error ? error.message : "Gagal menyimpan obat.",
+        }));
+        throw error;
+      }
+    },
+    updateMedication: async (med) => {
+      await useProfileStore.getState().addMedication(med);
+    },
+    removeMedication: async (id) => {
+      const numericId = parseNumericId(id);
+      if (numericId === null) {
+        await useProfileStore.getState().fetchSnapshot();
+        return;
+      }
+
+      set((state) => ({ ...state, loading: true, error: null }));
+      try {
+        const snapshot = await mutateSnapshot({
+          entity: "med",
+          action: "delete",
+          id: numericId,
+        });
+        const mapped = mapSnapshotResponse(snapshot);
+        set(() => ({
+          ...mapped,
+          loading: false,
+          error: null,
+        }));
+      } catch (error) {
+        console.error("[profile] failed to remove medication", error);
+        set((state) => ({
+          ...state,
+          loading: false,
+          error: error instanceof Error ? error.message : "Gagal menghapus obat.",
+        }));
+        throw error;
+      }
+    },
+    stopMedication: async (id) => {
+      const numericId = parseNumericId(id);
+      if (numericId === null) {
+        await useProfileStore.getState().fetchSnapshot();
+        return;
+      }
+
+      set((state) => ({ ...state, loading: true, error: null }));
+      try {
+        const snapshot = await mutateSnapshot({
+          entity: "med",
+          action: "status",
+          id: numericId,
+          status: "stopped",
+        });
+        const mapped = mapSnapshotResponse(snapshot);
+        set(() => ({
+          ...mapped,
+          loading: false,
+          error: null,
+        }));
+      } catch (error) {
+        console.error("[profile] failed to stop medication", error);
+        set((state) => ({
+          ...state,
+          loading: false,
+          error: error instanceof Error ? error.message : "Gagal menghentikan obat.",
+        }));
+        throw error;
+      }
+    },
   })),
 );
 
@@ -109,7 +415,7 @@ const computeSnapshot = (allergies: Allergy[], medications: Medication[]): Snaps
 
 export const useProfileSnapshot = create<SnapshotState>()(
   devtools((set) => ({
-    ...computeSnapshot(initialAllergies, initialMeds),
+    ...computeSnapshot([], []),
     recompute: () => {
       const { allergies, medications } = useProfileStore.getState();
       const snapshot = computeSnapshot(allergies, medications);
@@ -150,8 +456,19 @@ export function getCurrentProfileSnapshot(): SnapshotEventDetail {
 }
 
 let listenerBound = false;
+let initialFetchTriggered = false;
 
-if (typeof window !== "undefined" && !listenerBound) {
-  initializeProfileSnapshotListener();
-  listenerBound = true;
+if (typeof window !== "undefined") {
+  if (!listenerBound) {
+    initializeProfileSnapshotListener();
+    listenerBound = true;
+  }
+
+  if (!initialFetchTriggered) {
+    initialFetchTriggered = true;
+    void useProfileStore
+      .getState()
+      .fetchSnapshot()
+      .catch((error) => console.error("[profile] initial snapshot load failed", error));
+  }
 }

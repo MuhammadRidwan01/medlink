@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { registerAction } from "../actions";
 
 type RegisterFormState = {
   fullName: string;
@@ -16,7 +16,6 @@ type RegisterFormState = {
 };
 
 export default function RegisterPage() {
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -52,21 +51,17 @@ export default function RegisterPage() {
     setIsLoading(true);
     setFormError(null);
 
-    const { error } = await supabase.auth.signUp({
+    const result = await registerAction({
       email: form.email.trim(),
       password: form.password,
-      options: {
-        data: {
-          full_name: form.fullName.trim(),
-        },
-      },
+      fullName: form.fullName.trim(),
     });
 
-    if (error) {
-      setFormError(error.message);
+    if (!result.ok) {
+      setFormError(result.message);
       toast({
         title: "Registrasi gagal",
-        description: error.message,
+        description: result.message,
         variant: "destructive",
       });
       setIsLoading(false);
