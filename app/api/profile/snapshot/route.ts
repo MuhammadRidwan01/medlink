@@ -9,6 +9,8 @@ type SnapshotProfile = {
   dob: string | null;
   sex: string | null;
   blood_type: string | null;
+  phone: string | null;
+  address: string | null;
 };
 
 type SnapshotAllergy = {
@@ -74,12 +76,27 @@ type MedicationStatusBody = {
   status: 'active' | 'stopped';
 };
 
+type ProfileUpsertBody = {
+  entity: 'profile';
+  action: 'upsert';
+  record: {
+    email?: string | null;
+    name?: string | null;
+    dob?: string | null;
+    sex?: string | null;
+    bloodType?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  };
+};
+
 type MutationBody =
   | AllergyUpsertBody
   | AllergyDeleteBody
   | MedicationUpsertBody
   | MedicationDeleteBody
-  | MedicationStatusBody;
+  | MedicationStatusBody
+  | ProfileUpsertBody;
 
 const parseId = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -172,6 +189,12 @@ const fetchSnapshot = async (
     if (fallbackProfile?.blood_type) {
       bootstrap.blood_type = fallbackProfile.blood_type;
     }
+    if (fallbackProfile?.phone) {
+      bootstrap.phone = fallbackProfile.phone;
+    }
+    if (fallbackProfile?.address) {
+      bootstrap.address = fallbackProfile.address;
+    }
 
     const { data: insertedProfile, error: insertError } = await supabase
       .from('profiles')
@@ -235,6 +258,8 @@ export async function GET() {
     dob: null,
     sex: null,
     blood_type: null,
+    phone: (user.user_metadata?.phone as string | undefined) ?? null,
+    address: null,
   });
 
   return NextResponse.json(snapshot);
@@ -367,6 +392,73 @@ export async function POST(request: NextRequest) {
       } else {
         return NextResponse.json({ message: 'Aksi obat tidak dikenali' }, { status: 400 });
       }
+    } else if (body.entity === 'profile') {
+      if (body.action !== 'upsert') {
+        return NextResponse.json({ message: 'Aksi profil tidak dikenali' }, { status: 400 });
+      }
+
+      const { record } = body;
+
+      const payload: Record<string, unknown> = { id: user.id };
+
+      if (record.email !== undefined) {
+        payload.email = record.email?.trim() ?? null;
+      }
+
+      if (record.name !== undefined) {
+        payload.name = record.name?.trim() ?? null;
+      }
+
+      if (record.dob !== undefined) {
+        if (record.dob === null || record.dob === '') {
+          payload.dob = null;
+        } else {
+          const parsed = new Date(record.dob);
+          if (Number.isNaN(parsed.getTime())) {
+            return NextResponse.json({ message: 'Tanggal lahir tidak valid' }, { status: 400 });
+          }
+          payload.dob = parsed.toISOString().slice(0, 10);
+        }
+      }
+
+      if (record.sex !== undefined) {
+        if (!record.sex) {
+          payload.sex = null;
+        } else {
+          const normalizedSex = record.sex.toLowerCase();
+          if (['male', 'female', 'unspecified'].includes(normalizedSex)) {
+            payload.sex = normalizedSex;
+          } else {
+            return NextResponse.json({ message: 'Jenis kelamin tidak valid' }, { status: 400 });
+          }
+        }
+      }
+
+      if (record.bloodType !== undefined) {
+        if (!record.bloodType) {
+          payload.blood_type = null;
+        } else {
+          const normalizedBt = record.bloodType.trim().toUpperCase();
+          if (!/^(A|B|AB|O)[+-]?$/.test(normalizedBt)) {
+            return NextResponse.json({ message: 'Golongan darah tidak valid' }, { status: 400 });
+          }
+          payload.blood_type = normalizedBt;
+        }
+      }
+
+      if (record.phone !== undefined) {
+        payload.phone = record.phone?.trim() ?? null;
+      }
+
+      if (record.address !== undefined) {
+        payload.address = record.address?.trim() ?? null;
+      }
+
+      await supabase
+        .from('profiles')
+        .upsert(payload, { onConflict: 'id' })
+        .select('id')
+        .single();
     } else {
       return NextResponse.json({ message: 'Entitas tidak didukung' }, { status: 400 });
     }

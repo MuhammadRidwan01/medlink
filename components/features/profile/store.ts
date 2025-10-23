@@ -10,6 +10,8 @@ export type ProfileSummary = {
   dob: string | null;
   sex: string | null;
   bloodType: string | null;
+  phone: string | null;
+  address: string | null;
 };
 
 export type AllergySeverity = "mild" | "moderate" | "severe";
@@ -39,6 +41,8 @@ type SnapshotApiResponse = {
     dob: string | null;
     sex: string | null;
     blood_type: string | null;
+    phone: string | null;
+    address: string | null;
   } | null;
   allergies: Array<{
     id: number;
@@ -88,11 +92,24 @@ type SnapshotMutation =
       id: number;
     }
   | {
-    entity: "med";
-    action: "status";
-    id: number;
-    status: MedicationStatus;
-  };
+      entity: "med";
+      action: "status";
+      id: number;
+      status: MedicationStatus;
+    }
+  | {
+      entity: "profile";
+      action: "upsert";
+      record: {
+        email?: string | null;
+        name?: string | null;
+        dob?: string | null;
+        sex?: string | null;
+        bloodType?: string | null;
+        phone?: string | null;
+        address?: string | null;
+      };
+    };
 
 type ProfileState = {
   profile: ProfileSummary | null;
@@ -106,6 +123,15 @@ type ProfileState = {
     medications: Medication[];
   }) => void;
   fetchSnapshot: () => Promise<void>;
+  updateProfile: (payload: {
+    email?: string | null;
+    name?: string | null;
+    dob?: string | null;
+    sex?: string | null;
+    bloodType?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  }) => Promise<void>;
   addAllergy: (allergy: Allergy) => Promise<void>;
   updateAllergy: (allergy: Allergy) => Promise<void>;
   removeAllergy: (id: string) => Promise<void>;
@@ -137,6 +163,8 @@ const mapSnapshotResponse = (
         dob: payload.profile.dob,
         sex: payload.profile.sex,
         bloodType: payload.profile.blood_type,
+        phone: payload.profile.phone,
+        address: payload.profile.address,
       }
     : null,
   allergies: payload.allergies.map((item) => ({
@@ -230,6 +258,30 @@ export const useProfileStore = create<ProfileState>()(
           ...state,
           loading: false,
           error: error instanceof Error ? error.message : "Gagal memuat snapshot.",
+        }));
+        throw error;
+      }
+    },
+    updateProfile: async (payload) => {
+      set((state) => ({ ...state, loading: true, error: null }));
+      try {
+        const snapshot = await mutateSnapshot({
+          entity: "profile",
+          action: "upsert",
+          record: payload,
+        });
+        const mapped = mapSnapshotResponse(snapshot);
+        set(() => ({
+          ...mapped,
+          loading: false,
+          error: null,
+        }));
+      } catch (error) {
+        console.error("[profile] failed to update profile", error);
+        set((state) => ({
+          ...state,
+          loading: false,
+          error: error instanceof Error ? error.message : "Gagal memperbarui profil.",
         }));
         throw error;
       }

@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
-
+import { redirect } from "next/navigation";
 type LoginPayload = {
   email: string;
   password: string;
@@ -216,6 +216,7 @@ export async function registerAction(
     options: {
       data: {
         full_name: fullName,
+         role: "patient"
       },
       emailRedirectTo: normalizedRedirect
         ? `${normalizedRedirect}/auth/login`
@@ -228,4 +229,24 @@ export async function registerAction(
   }
 
   return { ok: true };
+}
+
+export async function logoutAction() {
+  const supa = getSupabaseActionClient();
+
+  // hapus sesi Supabase
+  await supa.auth.signOut({ scope: "global" });
+
+  // bersihkan SEMUA jejak cookie auth
+  const jar = await cookies();
+  for (const name of [
+    ACCESS_TOKEN_COOKIE,
+    REFRESH_TOKEN_COOKIE,
+    "sb-access-token",
+    "sb-refresh-token",
+  ]) {
+    try { jar.delete(name); } catch {}
+  }
+
+  redirect("/auth/login");
 }

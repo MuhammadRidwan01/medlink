@@ -4,7 +4,8 @@ import { Bell, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-
+import { LogOut } from "lucide-react";
+import { logoutAction } from "@/app/(auth)/auth/actions";
 type HeaderProps = {
   title?: string;
   className?: string;
@@ -55,6 +56,15 @@ export function Header({ title, className, onMenuClick, children }: HeaderProps)
         >
           <Bell className="h-5 w-5" />
         </button>
+        <button
+      onClick={() => logoutAction()}
+      className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm
+                 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700
+                 ring-1 ring-slate-200 dark:ring-slate-700"
+      aria-label="Keluar"
+    >
+      <LogOut className="h-4 w-4" />
+    </button>
       </div>
     </header>
   );

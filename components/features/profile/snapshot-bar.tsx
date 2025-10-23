@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { cubicBezier, motion } from "framer-motion";
-import { Pill, ShieldAlert } from "lucide-react";
+import { Pill, ShieldAlert, User } from "lucide-react";
 import { useProfileSnapshot } from "./store";
 
 export function SnapshotBar() {
@@ -44,9 +45,18 @@ export function SnapshotBar() {
           </span>
         ))}
         {!topAllergies.length && !topMeds.length ? (
-          <span className="rounded-badge border border-border/60 bg-muted/30 px-3 py-1 text-muted-foreground">
-            Snapshot belum tersedia
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-badge border border-border/60 bg-muted/30 px-3 py-1 text-muted-foreground">
+              Snapshot belum tersedia
+            </span>
+            <Link
+              href="/patient/profile"
+              className="tap-target inline-flex items-center gap-2 rounded-button border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            >
+              <User className="h-3.5 w-3.5" aria-hidden="true" />
+              Lengkapi profil
+            </Link>
+          </div>
         ) : null}
       </div>
     </motion.section>

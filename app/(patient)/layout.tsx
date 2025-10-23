@@ -2,10 +2,13 @@
 
 import { Suspense, useState } from "react";
 import {
-  ActivitySquare,
+  Bell,
   LayoutDashboard,
+  MessageSquare,
+  Package,
   Pill,
   ShoppingBag,
+  UserRound,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -23,9 +26,14 @@ const patientNav = [
     icon: LayoutDashboard,
   },
   {
-    href: "/patient/triage",
-    label: "AI Triage",
-    icon: ActivitySquare,
+    href: "/patient/inbox",
+    label: "Inbox",
+    icon: MessageSquare,
+  },
+  {
+    href: "/patient/notifications",
+    label: "Notifikasi",
+    icon: Bell,
   },
   {
     href: "/patient/prescriptions",
@@ -33,9 +41,19 @@ const patientNav = [
     icon: Pill,
   },
   {
+    href: "/patient/orders",
+    label: "Pesanan",
+    icon: Package,
+  },
+  {
     href: "/marketplace",
     label: "Marketplace",
     icon: ShoppingBag,
+  },
+  {
+    href: "/patient/profile",
+    label: "Profil",
+    icon: UserRound,
   },
 ] satisfies SidebarItem[];
 
