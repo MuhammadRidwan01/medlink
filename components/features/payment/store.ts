@@ -2,6 +2,8 @@
 
 import { create } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
+import { checkoutAction } from "@/lib/commerce/actions";
+import { MOCK_PRODUCTS } from "@/components/features/marketplace/data";
 import {
   BASE_DISCOUNT,
   DELIVERY_OPTIONS,
@@ -18,6 +20,7 @@ export type PaymentOutcome = "success" | "failed" | "pending";
 
 export type PaymentOrder = {
   id: string;
+  paymentId: string;
   items: CheckoutItem[];
   addressId: string;
   deliveryOptionId: string;
@@ -55,13 +58,16 @@ type PaymentStore = {
   orders: Record<string, PaymentOrder>;
   developerOutcome: PaymentOutcome;
   setDeveloperOutcome: (outcome: PaymentOutcome) => void;
-  createOrder: (input: CreateOrderInput) => string;
+  createOrder: (input: CreateOrderInput) => Promise<{ orderId: string; paymentId: string }>;
   setActiveOrder: (orderId?: string) => void;
   setOrderStatus: (orderId: string, status: PaymentStatus) => void;
   setPaymentChannel: (orderId: string, channel: PaymentChannel) => void;
   markRetryUsed: (orderId: string) => void;
   resetOrder: (orderId: string) => void;
 };
+
+const PRODUCT_SLUG_LOOKUP = new Map(MOCK_PRODUCTS.map((product) => [product.id, product.slug]));
+const PRODUCT_BY_SLUG = new Map(MOCK_PRODUCTS.map((product) => [product.slug, product]));
 
 const storage = typeof window !== "undefined"
   ? createJSONStorage<Partial<PaymentStore>>(() => window.sessionStorage)
@@ -78,21 +84,54 @@ export const usePaymentStore = create<PaymentStore>()(
         orders: {},
         developerOutcome: "success",
         setDeveloperOutcome: (outcome) => set(() => ({ developerOutcome: outcome })),
-        createOrder: ({ addressId, deliveryOptionId, name, email, phone, notes }) => {
+        createOrder: async ({ addressId, deliveryOptionId, name, email, phone, notes }) => {
           const option =
             DELIVERY_OPTIONS.find((item) => item.id === deliveryOptionId) ?? DELIVERY_OPTIONS[0];
-          const subtotal = MOCK_CHECKOUT_ITEMS.reduce(
+          const discount = BASE_DISCOUNT;
+          const shipping = option.cost;
+          const timestamp = new Date().toISOString();
+
+          const resolvedItems = MOCK_CHECKOUT_ITEMS.map((item) => {
+            const slug =
+              item.slug ??
+              (item.productId ? PRODUCT_SLUG_LOOKUP.get(item.productId) : PRODUCT_SLUG_LOOKUP.get(item.id));
+            if (!slug) {
+              throw new Error(`Produk ${item.name} belum memiliki slug untuk diproses.`);
+            }
+            const product = PRODUCT_BY_SLUG.get(slug);
+            const price = product?.price ?? item.price;
+            return {
+              ...item,
+              slug,
+              name: product?.name ?? item.name,
+              price,
+            };
+          });
+
+          const subtotal = resolvedItems.reduce(
             (total, item) => total + item.price * item.quantity,
             0,
           );
-          const discount = BASE_DISCOUNT;
-          const shipping = option.cost;
-          const total = Math.max(subtotal + shipping - discount, 0);
-          const id = `INV-${Date.now()}`;
-          const timestamp = new Date().toISOString();
+
+          const cartPayload = resolvedItems.map((item) => ({
+            slug: item.slug!,
+            quantity: item.quantity,
+          }));
+
+          const { orderId, paymentId, total: serverTotal } = await checkoutAction({
+            items: cartPayload,
+          });
+
+          const computedTotal = Math.max(subtotal + shipping - discount, 0);
+          const normalizedServerTotal = Number(serverTotal);
+          const reconciledTotal = Number.isFinite(normalizedServerTotal)
+            ? normalizedServerTotal
+            : computedTotal;
+
           const order: PaymentOrder = {
-            id,
-            items: MOCK_CHECKOUT_ITEMS.map((item) => ({ ...item })),
+            id: orderId,
+            paymentId,
+            items: resolvedItems,
             addressId,
             deliveryOptionId: option.id,
             contact: { name, email, phone },
@@ -100,7 +139,7 @@ export const usePaymentStore = create<PaymentStore>()(
             subtotal,
             shipping,
             discount,
-            total,
+            total: reconciledTotal,
             status: "awaiting_payment",
             paymentChannel: undefined,
             createdAt: timestamp,
@@ -110,11 +149,11 @@ export const usePaymentStore = create<PaymentStore>()(
           set((state) => ({
             orders: {
               ...state.orders,
-              [id]: order,
+              [orderId]: order,
             },
-            activeOrderId: id,
+            activeOrderId: orderId,
           }));
-          return id;
+          return { orderId, paymentId };
         },
         setActiveOrder: (orderId) => set(() => ({ activeOrderId: orderId })),
         setOrderStatus: (orderId, status) => {

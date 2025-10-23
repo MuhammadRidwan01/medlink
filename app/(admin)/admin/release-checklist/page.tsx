@@ -61,7 +61,7 @@ async function checkCheckoutFlow(): Promise<Check> {
   try {
     const { usePaymentStore } = await import("@/components/features/payment/store");
     const st = usePaymentStore.getState();
-    const orderId = st.createOrder({
+    const { orderId } = await st.createOrder({
       addressId: "addr-1",
       deliveryOptionId: "standard",
       name: "Budi",

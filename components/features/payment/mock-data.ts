@@ -1,6 +1,7 @@
 export type CheckoutItem = {
   id: string;
   productId?: string;
+  slug?: string;
   name: string;
   detail: string;
   quantity: number;
@@ -34,6 +35,7 @@ export const MOCK_CHECKOUT_ITEMS: CheckoutItem[] = [
   {
     id: "rx-azithromycin",
     productId: "prod-11",
+    slug: "metformin-500mg-tablet",
     name: "Azithromycin 500 mg",
     detail: "10 tablet • Generik",
     quantity: 1,
@@ -44,6 +46,7 @@ export const MOCK_CHECKOUT_ITEMS: CheckoutItem[] = [
   {
     id: "otc-cough",
     productId: "prod-2",
+    slug: "ibuprofen-400mg-bottle",
     name: "Sirup Batuk Herbal",
     detail: "Botol 100 mL",
     quantity: 2,
@@ -54,6 +57,7 @@ export const MOCK_CHECKOUT_ITEMS: CheckoutItem[] = [
   {
     id: "device-thermometer",
     productId: "prod-20",
+    slug: "aplikator-insulin-smart",
     name: "Termometer Digital",
     detail: "Akurasi ±0.1°C",
     quantity: 1,

@@ -8,6 +8,7 @@ import {
   CreditCard,
   RotateCcw,
 } from "lucide-react";
+import { notificationBus, useNotificationStore, type AppNotification } from "@/components/features/notifications/store";
 import { PageShell } from "@/components/layout/page-shell";
 import { SnapMockModal } from "@/components/features/payment/snap-mock-modal";
 import { OrderSummary } from "@/components/features/payment/order-summary";
@@ -21,6 +22,7 @@ import {
   type PaymentOutcome,
 } from "@/components/features/payment/store";
 import { formatCurrency } from "@/lib/format";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import {
   BASE_DISCOUNT,
@@ -51,6 +53,8 @@ export function PaymentPageClient({ orderId }: PaymentPageClientProps) {
     (state) => state.setDeveloperOutcome,
   );
   const deliveryOptions = usePaymentStore((state) => state.deliveryOptions);
+  const addNotification = useNotificationStore((state) => state.add);
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [modalOpen, setModalOpen] = useState(true);
   const [selectedChannel, setSelectedChannel] =
     useState<PaymentChannel>("virtual_account");
@@ -65,6 +69,46 @@ export function PaymentPageClient({ orderId }: PaymentPageClientProps) {
       }
     };
   }, [orderId, setActiveOrder]);
+
+  useEffect(() => {
+    if (!orderId) return;
+    const channel = supabase
+      .channel("payment:update")
+      .on("broadcast", { event: "status" }, ({ payload }) => {
+        const eventPayload = payload as { orderId?: string; status?: PaymentOutcome; paymentId?: string };
+        if (!eventPayload?.orderId || eventPayload.orderId !== orderId) {
+          return;
+        }
+        const nextStatus: PaymentOutcome =
+          eventPayload.status === "success" || eventPayload.status === "failed"
+            ? eventPayload.status
+            : "pending";
+        setOrderStatus(orderId, nextStatus);
+        if (nextStatus === "pending") {
+          return;
+        }
+        const notification: AppNotification = {
+          id: `payment-${eventPayload.paymentId ?? orderId}-${Date.now()}`,
+          category: "system" as const,
+          title: nextStatus === "success" ? "Pembayaran berhasil" : "Pembayaran gagal",
+          description:
+            nextStatus === "success"
+              ? "Pesanan akan segera diproses. Terima kasih!"
+              : "Pembayaran gagal diproses. Silakan coba ulang atau gunakan kanal lain.",
+          timestamp: new Date().toISOString(),
+          read: false,
+          route: nextStatus === "success" ? "/patient/orders" : "/patient/checkout",
+        };
+        addNotification(notification);
+        notificationBus.emit("notify:new", notification);
+      });
+
+    void channel.subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [orderId, supabase, setOrderStatus, addNotification]);
 
   useEffect(() => {
     if (order?.paymentChannel) {
@@ -111,12 +155,30 @@ export function PaymentPageClient({ orderId }: PaymentPageClientProps) {
     [deliveryOptions, order?.deliveryOptionId],
   );
 
-  const handleOutcome = (nextStatus: PaymentOutcome) => {
-    if (!order) {
-      return;
+  const sendWebhook = async (nextOutcome: Extract<PaymentOutcome, "success" | "failed">) => {
+    try {
+      const response = await fetch("/functions/v1/payment-webhook", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ orderId, outcome: nextOutcome }),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Failed to invoke payment webhook", error);
+      toast({
+        title: "Gagal memperbarui pembayaran",
+        description: "Silakan coba lagi dalam beberapa saat.",
+        variant: "destructive",
+      });
     }
+  };
+
+  const handleOutcome = (nextStatus: PaymentOutcome) => {
     setDeveloperOutcome(nextStatus);
-    setOrderStatus(order.id, nextStatus);
   };
 
   const handleRetry = () => {
@@ -134,7 +196,7 @@ export function PaymentPageClient({ orderId }: PaymentPageClientProps) {
       return;
     }
     setDeveloperOutcome("success");
-    setOrderStatus(order.id, "success");
+    void sendWebhook("success");
   };
 
   const onConfirmPayment = () => {
@@ -143,17 +205,12 @@ export function PaymentPageClient({ orderId }: PaymentPageClientProps) {
     }
     setModalOpen(false);
     setOrderStatus(order.id, "pending");
+    if (processingTimeout.current) {
+      clearTimeout(processingTimeout.current);
+    }
     processingTimeout.current = setTimeout(() => {
-      switch (developerOutcome) {
-        case "success":
-          setOrderStatus(order.id, "success");
-          break;
-        case "failed":
-          setOrderStatus(order.id, "failed");
-          break;
-        case "pending":
-        default:
-          break;
+      if (developerOutcome === "success" || developerOutcome === "failed") {
+        void sendWebhook(developerOutcome);
       }
     }, 2200);
   };

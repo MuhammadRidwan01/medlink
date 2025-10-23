@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Beaker, X } from "lucide-react";
 import { type PaymentOutcome } from "./store";
-import { setOutcomeWithDelay } from "./payment-state-store";
 import { useToast } from "@/components/ui/use-toast";
 
 type Props = {
@@ -14,6 +13,7 @@ export function WebhookSimulator({ orderId }: Props) {
   const [open, setOpen] = useState(false);
   const [outcome, setOutcome] = useState<PaymentOutcome>("success");
   const [delay, setDelay] = useState(1200);
+  const [isSending, setIsSending] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
 
@@ -92,16 +92,49 @@ export function WebhookSimulator({ orderId }: Props) {
             <div className="flex items-end">
               <button
                 type="button"
-                onClick={() => {
-                  setOutcomeWithDelay(orderId, outcome, delay);
-                  toast({
-                    title: "Webhook dikirim",
-                    description: `Outcome: ${outcome} • Delay: ${delay}ms`,
-                  });
+                onClick={async () => {
+                  if (isSending) return;
+                  if (outcome === "pending") {
+                    toast({
+                      title: "Status dibiarkan pending",
+                      description: `Tidak ada webhook dikirim. Tunggu ${delay}ms sebelum cek ulang.`,
+                    });
+                    return;
+                  }
+                  setIsSending(true);
+                  try {
+                    if (delay > 0) {
+                      await new Promise((resolve) => setTimeout(resolve, delay));
+                    }
+                    const response = await fetch("/functions/v1/payment-webhook", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({ orderId, outcome }),
+                    });
+                    if (!response.ok) {
+                      throw new Error(`HTTP ${response.status}`);
+                    }
+                    toast({
+                      title: "Webhook dikirim",
+                      description: `Outcome: ${outcome} - Delay: ${delay}ms`,
+                    });
+                  } catch (error) {
+                    console.error("Failed to send payment webhook", error);
+                    toast({
+                      title: "Webhook gagal",
+                      description: "Tidak dapat mengirim callback pembayaran.",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsSending(false);
+                  }
                 }}
-                className="tap-target inline-flex w-full items-center justify-center rounded-button bg-primary-gradient px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:shadow-lg"
+                className="tap-target inline-flex w-full items-center justify-center rounded-button bg-primary-gradient px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:shadow-lg disabled:opacity-60"
+                disabled={isSending}
               >
-                Kirim callback
+                {isSending ? "Mengirim..." : "Kirim callback"}
               </button>
             </div>
           </div>

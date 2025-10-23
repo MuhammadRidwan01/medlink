@@ -9,6 +9,7 @@ import { OrderSummary } from "@/components/features/payment/order-summary";
 import { TestSwitches } from "@/components/features/payment/test-switches";
 import { BASE_DISCOUNT, DELIVERY_OPTIONS } from "@/components/features/payment/mock-data";
 import { usePaymentStore } from "@/components/features/payment/store";
+import { useToast } from "@/components/ui/use-toast";
 import { formatCurrency } from "@/lib/format";
 
 export default function CheckoutPage() {
@@ -20,6 +21,7 @@ export default function CheckoutPage() {
   const setActiveOrder = usePaymentStore((state) => state.setActiveOrder);
   const developerOutcome = usePaymentStore((state) => state.developerOutcome);
   const setDeveloperOutcome = usePaymentStore((state) => state.setDeveloperOutcome);
+  const { toast } = useToast();
 
   const defaultAddress = useMemo(
     () => addresses.find((address) => address.isDefault) ?? addresses[0],
@@ -68,19 +70,30 @@ export default function CheckoutPage() {
     contactPhone.trim().length >= 8 &&
     contactEmail.includes("@");
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (!isFormValid || submitting) return;
     setSubmitting(true);
-    const orderId = createOrder({
-      addressId: selectedAddressId,
-      deliveryOptionId: selectedDeliveryId,
-      name: contactName,
-      email: contactEmail,
-      phone: contactPhone,
-      notes,
-    });
-    setActiveOrder(orderId);
-    router.push(`/patient/payment/${orderId}`);
+    try {
+      const { orderId } = await createOrder({
+        addressId: selectedAddressId,
+        deliveryOptionId: selectedDeliveryId,
+        name: contactName,
+        email: contactEmail,
+        phone: contactPhone,
+        notes,
+      });
+      setActiveOrder(orderId);
+      router.push(`/patient/payment/${orderId}`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Checkout gagal. Silakan coba beberapa saat lagi.";
+      toast({
+        title: "Checkout gagal",
+        description: message,
+        variant: "destructive",
+      });
+      setSubmitting(false);
+    }
   };
 
   return (
