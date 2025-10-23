@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AtSign, Home, Phone } from "lucide-react";
+import { useProfileStore } from "./store";
 
 type ProfileFormProps = {
   loading?: boolean;
@@ -10,6 +11,7 @@ type ProfileFormProps = {
 
 export function ProfileForm({ loading }: ProfileFormProps) {
   const [hydrated, setHydrated] = useState(false);
+  const profile = useProfileStore((state) => state.profile);
   const [email, setEmail] = useState("pasien@medlink.id");
   const [phone, setPhone] = useState("+62 812-3456-7890");
   const [address, setAddress] = useState("Jl. Melati No. 12, Jakarta Selatan");
@@ -17,6 +19,12 @@ export function ProfileForm({ loading }: ProfileFormProps) {
   useEffect(() => {
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (profile?.email) {
+      setEmail(profile.email);
+    }
+  }, [profile?.email]);
 
   if (loading || !hydrated) {
     return (
@@ -87,4 +95,3 @@ export function ProfileForm({ loading }: ProfileFormProps) {
     </motion.section>
   );
 }
-

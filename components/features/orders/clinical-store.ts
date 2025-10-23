@@ -1,5 +1,7 @@
 "use client";
 
+import type { DbClinicalOrder } from "@/lib/clinical/types";
+
 export type OrderKind = "lab" | "imaging";
 export type OrderStatus = "pending" | "completed";
 
@@ -120,3 +122,20 @@ export function updateClinicalOrder(id: string, patch: Partial<ClinicalOrder>) {
   emit();
 }
 
+// Bridge helper: upsert order from DB realtime event into the demo store
+export function upsertDbClinicalOrder(row: DbClinicalOrder) {
+  const mapped: ClinicalOrder = {
+    id: row.id,
+    kind: row.type,
+    patient: "(unknown)",
+    date: row.created_at,
+    status: row.status === "completed" ? "completed" : "pending",
+    priority: (row.priority as any) || "normal",
+    note: row.note || undefined,
+    images: row.type === "imaging" ? [] : [],
+    timeline: [{ id: "t1", label: "Dipesan", timestamp: row.created_at }],
+  };
+  const exists = __orders.some((o) => o.id === row.id);
+  __orders = exists ? __orders.map((o) => (o.id === row.id ? { ...o, ...mapped } : o)) : [mapped, ...__orders];
+  emit();
+}

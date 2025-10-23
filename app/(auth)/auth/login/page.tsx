@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Suspense,
-  type FormEvent,
-  useMemo,
-  useState,
-} from "react";
+import { Suspense, type FormEvent, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,6 +8,7 @@ import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { inferRoleFromEmail } from "@/hooks/use-session";
+import { loginAction } from "../actions";
 
 type LoginFormState = {
   email: string;
@@ -52,16 +48,16 @@ function LoginContent() {
     setIsLoading(true);
     setFormError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const result = await loginAction({
       email: form.email.trim(),
       password: form.password,
     });
 
-    if (error) {
-      setFormError(error.message);
+    if (!result.ok) {
+      setFormError(result.message);
       toast({
         title: "Login gagal",
-        description: error.message,
+        description: result.message,
         variant: "destructive",
       });
       setIsLoading(false);
@@ -78,21 +74,17 @@ function LoginContent() {
     const destination = redirectTo ?? fallbackRoute;
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
-        await fetch("/auth/session", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session: sessionData.session }),
-        });
-      }
+      await supabase.auth.setSession({
+        access_token: result.session.access_token,
+        refresh_token: result.session.refresh_token,
+      });
     } catch (sessionError) {
-      console.error("[login] failed to sync session cookie", sessionError);
+      console.error("[login] failed to sync client session", sessionError);
     }
 
     setTimeout(() => {
       router.replace(destination);
+      router.refresh();
     }, 200);
     setIsLoading(false);
   };

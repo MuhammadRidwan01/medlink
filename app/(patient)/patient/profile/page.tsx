@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
 import { ProfileHeader } from "@/components/features/profile/profile-header";
 import { SnapshotBar } from "@/components/features/profile/snapshot-bar";
@@ -8,13 +8,65 @@ import { VitalsCard } from "@/components/features/profile/vitals-card";
 import { AllergiesCard } from "@/components/features/profile/allergies-card";
 import { MedsCard } from "@/components/features/profile/meds-card";
 import { ProfileForm } from "@/components/features/profile/profile-form";
+import { useProfileStore } from "@/components/features/profile/store";
 
 export default function PatientProfilePage() {
   const [hydrated, setHydrated] = useState(false);
+  const profile = useProfileStore((state) => state.profile);
+  const loadingStore = useProfileStore((state) => state.loading);
 
   useEffect(() => {
     setHydrated(true);
+    void useProfileStore
+      .getState()
+      .fetchSnapshot()
+      .catch((error) =>
+        console.error("[patient/profile] failed to refresh snapshot", error),
+      );
   }, []);
+
+  const headerProps = useMemo(() => {
+    const fallbackSex = "Pria" as const;
+    const mapSex = (value: string | null) => {
+      if (!value) return fallbackSex;
+      const normalized = value.toLowerCase();
+      if (normalized.startsWith("f")) {
+        return "Wanita" as const;
+      }
+      if (normalized.startsWith("m")) {
+        return "Pria" as const;
+      }
+      return fallbackSex;
+    };
+
+    const formatDob = (value: string | null) => {
+      if (!value) {
+        return "Tanggal lahir belum diisi";
+      }
+      try {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return "Tanggal lahir belum diisi";
+        }
+        return new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }).format(date);
+      } catch {
+        return "Tanggal lahir belum diisi";
+      }
+    };
+
+    return {
+      name: profile?.name ?? "Pasien MedLink",
+      dob: formatDob(profile?.dob ?? null),
+      sex: mapSex(profile?.sex ?? null),
+      bloodType: profile?.bloodType ?? "Belum diisi",
+    };
+  }, [profile]);
+
+  const isLoading = !hydrated || loadingStore;
 
   return (
     <PageShell
@@ -23,23 +75,22 @@ export default function PatientProfilePage() {
     >
       <div className="space-y-6">
         <ProfileHeader
-          name="Ridwa Pratama"
-          dob="12 Maret 1993"
-          sex="Pria"
-          bloodType="O+"
-          loading={!hydrated}
+          name={headerProps.name}
+          dob={headerProps.dob}
+          sex={headerProps.sex}
+          bloodType={headerProps.bloodType}
+          loading={isLoading}
         />
         <SnapshotBar />
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <VitalsCard initialHeightCm={172} initialWeightKg={68} loading={!hydrated} />
-          <ProfileForm loading={!hydrated} />
+          <VitalsCard initialHeightCm={172} initialWeightKg={68} loading={isLoading} />
+          <ProfileForm loading={isLoading} />
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          <AllergiesCard loading={!hydrated} />
-          <MedsCard loading={!hydrated} />
+          <AllergiesCard loading={isLoading} />
+          <MedsCard loading={isLoading} />
         </div>
       </div>
     </PageShell>
   );
 }
-
