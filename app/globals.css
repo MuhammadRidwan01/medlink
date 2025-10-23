@@ -59,6 +59,19 @@
     --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --duration-fast: 0ms;
+      --duration-normal: 0ms;
+      --duration-slow: 0ms;
+    }
+    * {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
   .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;

@@ -1,23 +1,28 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { QueueList } from "./queue-list";
 import { SplitPane } from "./split-pane";
-import { SessionTabs, type NoteEntry, type OrderEntry } from "./session-tabs";
+import type { OrderEntry } from "./session-tabs";
+import { SessionTabs as ConsultationTabs } from "@/components/features/consultation/session-tabs";
+import { consultationBus } from "@/components/features/consultation/event-bus";
+import { MEDICATION_OPTIONS, type MedicationOption } from "@/components/features/prescription/medication-search";
 import { PatientSnapshot } from "./patient-snapshot";
 import { HeaderActions } from "./header-actions";
 import type { RedFlagSeverity } from "./red-flag-banner";
 import type { ChatMessageProps } from "@/components/features/ai-triage/chat-message";
 import { useToast } from "@/components/ui/use-toast";
 import type { QueueEntry } from "./queue-item";
-import {
-  DraftPrescriptionSheet,
-  type DraftMedication,
-  type DraftStatus,
-  type MedicationOption,
-} from "@/components/features/prescription/draft-prescription-sheet";
+import dynamic from "next/dynamic";
+import type { DraftMedication, DraftStatus, MedicationOption } from "@/components/features/prescription/draft-prescription-sheet";
+const DraftPrescriptionSheet = dynamic(
+  () => import("@/components/features/prescription/draft-prescription-sheet").then((m) => m.DraftPrescriptionSheet),
+  { ssr: false },
+);
+import { MiniScheduler } from "@/components/features/schedule/mini-scheduler";
+import { addDraft } from "@/components/features/prescription/store";
 
 type ConsultationWorkspaceProps = {
   consultationId: string;
@@ -193,33 +198,7 @@ const messagesSeed: Record<string, ChatMessageProps[]> = {
   ],
 };
 
-const notesSeed: Record<string, NoteEntry[]> = {
-  "queue-1": [
-    {
-      id: "note-q1-1",
-      title: "Catatan awal",
-      author: "Dr. Meida",
-      timestamp: "09:05",
-      content: "Pertimbangkan pemeriksaan darah lengkap dan kultur bila demam >3 hari.",
-    },
-    {
-      id: "note-q1-2",
-      title: "Rencana",
-      author: "Dr. Meida",
-      timestamp: "09:06",
-      content: "Infus rehidrasi bila pasien muntah >3x.",
-    },
-  ],
-  "queue-3": [
-    {
-      id: "note-q3-1",
-      title: "Protokol darurat",
-      author: "Dr. Andi",
-      timestamp: "08:55",
-      content: "Aktifkan kode biru, siapkan nitrogliserin dan aspirin, koordinasi dengan IGD.",
-    },
-  ],
-};
+// legacy notes seed removed; notes move to structured Notes pane
 
 const ordersSeed: Record<string, OrderEntry[]> = {
   "queue-1": [
@@ -381,7 +360,6 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
 
   const selectedSnapshot = snapshotSeed[selectedId];
   const messages = messagesSeed[selectedId] ?? [];
-  const notes = notesSeed[selectedId] ?? [];
   const orders = ordersSeed[selectedId] ?? [];
 
   const selectedPatient = useMemo(
@@ -505,7 +483,22 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
       title: "Draf resep disimpan",
       description: "Anda dapat melanjutkan penyuntingan kapan saja.",
     });
-  }, [toast]);
+    if (selectedSnapshot && draftMedications.length) {
+      addDraft({
+        patientName: selectedSnapshot.name,
+        status: "draft",
+        items: draftMedications.map((m) => ({
+          id: m.id,
+          name: m.name,
+          code: m.sourceId,
+          strength: m.strength,
+          dose: m.dose,
+          frequency: m.frequency,
+          duration: m.duration,
+        })),
+      });
+    }
+  }, [toast, selectedSnapshot, draftMedications]);
 
   const handleSendForApproval = useCallback(() => {
     setDraftStatus("awaiting_approval");
@@ -513,7 +506,22 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
       title: "Dikirim untuk persetujuan",
       description: "Pasien akan diberi tahu setelah dokter menyetujui.",
     });
-  }, [toast]);
+    if (selectedSnapshot && draftMedications.length) {
+      addDraft({
+        patientName: selectedSnapshot.name,
+        status: "awaiting_approval",
+        items: draftMedications.map((m) => ({
+          id: m.id,
+          name: m.name,
+          code: m.sourceId,
+          strength: m.strength,
+          dose: m.dose,
+          frequency: m.frequency,
+          duration: m.duration,
+        })),
+      });
+    }
+  }, [toast, selectedSnapshot, draftMedications]);
 
   const handleCancelDraft = useCallback(() => {
     setIsDraftOpen(false);
@@ -541,6 +549,29 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
           ),
       }
     : undefined;
+
+  // Subscribe to consultation events (e.g., add medication opens Draft Prescription)
+  useEffect(() => {
+    const off = consultationBus.on("prescription:add", (payload) => {
+      const match = MEDICATION_OPTIONS.find((m) => m.code === payload.code || m.name === payload.name);
+      const option: MedicationOption =
+        match ?? {
+          id: payload.id,
+          name: payload.name,
+          code: payload.code,
+          strengths: payload.strengths,
+          defaultDose: payload.defaultDose,
+          defaultFrequency: payload.defaultFrequency,
+          defaultDuration: payload.defaultDuration,
+          tags: [],
+        };
+      setIsDraftOpen(true);
+      handleAddMedication(option);
+    });
+    return () => {
+      off();
+    };
+  }, [handleAddMedication]);
 
   return (
     <motion.div
@@ -578,7 +609,16 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
                 </p>
               ) : null}
             </div>
-            <SessionTabs messages={messages} notes={notes} orders={orders} />
+            <ConsultationTabs
+              messages={messages}
+              sessionActive={isActive}
+              ordersSeed={orders.map((o) => ({ id: o.id, kind: "meds" as const, label: o.medication }))}
+              snapshot={{
+                cc: selectedPatient?.reason,
+                hpi: selectedSnapshot?.diagnosis,
+                redFlags: selectedSnapshot?.redFlags,
+              }}
+            />
           </div>
         }
         right={
@@ -589,6 +629,7 @@ export function ConsultationWorkspace({ consultationId }: ConsultationWorkspaceP
           ) : null
         }
       />
+      <MiniScheduler />
       {selectedSnapshot ? (
         <DraftPrescriptionSheet
           open={isDraftOpen}

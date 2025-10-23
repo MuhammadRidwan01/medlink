@@ -12,6 +12,7 @@ import { DeliveryAddressCard } from "@/components/features/orders/delivery-addre
 import { OrderItems } from "@/components/features/orders/order-items";
 import { ReorderDialog } from "@/components/features/orders/reorder-dialog";
 import { formatCurrency } from "@/lib/format";
+import { FeedbackPrompt } from "@/components/features/feedback/feedback-prompt";
 
 type OrderDetailPageProps = {
   params: {
@@ -185,6 +186,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         items={order.items}
         orderId={order.id}
       />
+      {order.status === "delivered" ? <FeedbackPrompt kind="order" id={order.id} /> : null}
     </>
   );
 }

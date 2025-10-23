@@ -8,6 +8,9 @@ import { SnapMockModal } from "@/components/features/payment/snap-mock-modal";
 import { OrderSummary } from "@/components/features/payment/order-summary";
 import { PaymentStatusIndicator } from "@/components/features/payment/payment-status-indicator";
 import { TestSwitches } from "@/components/features/payment/test-switches";
+import { WebhookSimulator } from "@/components/features/payment/webhook-simulator";
+import { PaymentToastCenter } from "@/components/features/payment/toast-center";
+import { hydrateFromUrl } from "@/components/features/payment/payment-state-store";
 import { usePaymentStore, type PaymentOutcome } from "@/components/features/payment/store";
 import { formatCurrency } from "@/lib/format";
 import { useToast } from "@/components/ui/use-toast";
@@ -42,6 +45,7 @@ export default function PaymentPage({ params }: PaymentPageProps) {
 
   useEffect(() => {
     setActiveOrder(params.orderId);
+    hydrateFromUrl(params.orderId);
     return () => {
       if (processingTimeout.current) {
         clearTimeout(processingTimeout.current);
@@ -240,6 +244,9 @@ export default function PaymentPage({ params }: PaymentPageProps) {
             outcome={developerOutcome}
             onOutcomeChange={setDeveloperOutcome}
           />
+
+          <WebhookSimulator orderId={order.id} />
+          <PaymentToastCenter />
         </section>
 
         <aside className="space-y-4">

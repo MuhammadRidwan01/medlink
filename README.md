@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
 ## Getting Started
 
-First, run the development server:
+First, install dependencies and run the dev server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 to see the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Demo Seeds and Reset
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Seed mock data and set demo flags:
 
-## Learn More
+```bash
+npm run seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+- Reset to baseline (clears local/session mock stores on next load, then re-applies baseline seeds):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run reset
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The client bootstrap reads `public/mock-seed.json` and applies to localStorage/sessionStorage. Flags are controlled via `.env.local`.
 
-## Deploy on Vercel
+## Release Checklist
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Visit `/admin/release-checklist` to view toggles and run client-only Smoke Tests. All-green indicates the demo flows are ready.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Environment
+
+Copy `.env.example` to `.env.local` and adjust if needed:
+
+```bash
+cp .env.example .env.local
+```
+
+Required demo vars:
+
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`: demo placeholders are fine (no real backend required).
+- `NEXT_PUBLIC_ANALYTICS_DEMO`: enables analytics demo mode.
+- `NEXT_PUBLIC_APPLY_MOCK_SEEDS`: applies seeds on client load.
+- `NEXT_PUBLIC_RESET_ON_BOOT`: when `true`, clears seeded keys before applying.
+
+## CI (mock)
+
+Run verify locally:
+
+```bash
+npm run verify
+```
+
+GitHub Actions workflow runs the same checks on PRs.
+
+## Demo Flows
+
+- Patient triage: `patient/triage` (mock AI stream)
+- Checkout: `patient/checkout` (use webhook simulator to finalize)
+- Follow-up booking: via mini-scheduler components
+- Admin analytics: `admin/analytics` (requires `NEXT_PUBLIC_ANALYTICS_DEMO=true`)
