@@ -1,6 +1,7 @@
 "use server";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import type { PostgrestError } from "@supabase/supabase-js";
 import type {
   ClinicalOrderInput,
   ClinicalOrderStatus,
@@ -12,8 +13,11 @@ import type {
 } from "@/lib/clinical/types";
 
 // Creates a draft prescription owned by doctor for a patient (user)
-export async function createPrescription(userId: string, doctorId: string) {
-  const supabase = getSupabaseServerClient();
+export async function createPrescription(
+  userId: string,
+  doctorId: string,
+): Promise<{ data: DbPrescription | null; error: PostgrestError | null }> {
+  const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("clinical.prescriptions")
@@ -21,16 +25,15 @@ export async function createPrescription(userId: string, doctorId: string) {
     .select()
     .single<DbPrescription>();
 
-  if (error) throw error;
-  return data;
+  return { data: data ?? null, error };
 }
 
 // Adds an item to a draft prescription owned by the doctor
 export async function addPrescriptionItem(
   prescriptionId: string,
   payload: PrescriptionItemInput,
-) {
-  const supabase = getSupabaseServerClient();
+): Promise<{ data: DbPrescriptionItem | null; error: PostgrestError | null }> {
+  const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("clinical.prescription_items")
@@ -38,16 +41,15 @@ export async function addPrescriptionItem(
     .select()
     .single<DbPrescriptionItem>();
 
-  if (error) throw error;
-  return data;
+  return { data: data ?? null, error };
 }
 
 // Updates a prescription status (e.g., to 'awaiting_approval', 'approved', 'rejected')
 export async function updatePrescriptionStatus(
   prescriptionId: string,
   status: PrescriptionStatus,
-) {
-  const supabase = getSupabaseServerClient();
+): Promise<{ data: DbPrescription | null; error: PostgrestError | null }> {
+  const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("clinical.prescriptions")
@@ -56,8 +58,7 @@ export async function updatePrescriptionStatus(
     .select()
     .single<DbPrescription>();
 
-  if (error) throw error;
-  return data;
+  return { data: data ?? null, error };
 }
 
 // Creates a clinical order by doctor for a patient
@@ -65,8 +66,8 @@ export async function createClinicalOrder(
   patientId: string,
   doctorId: string,
   payload: ClinicalOrderInput,
-) {
-  const supabase = getSupabaseServerClient();
+): Promise<{ data: DbClinicalOrder | null; error: PostgrestError | null }> {
+  const supabase = await getSupabaseServerClient();
 
   const { status = "pending", ...rest } = payload;
 
@@ -76,13 +77,15 @@ export async function createClinicalOrder(
     .select()
     .single<DbClinicalOrder>();
 
-  if (error) throw error;
-  return data;
+  return { data: data ?? null, error };
 }
 
 // Updates the status of an existing clinical order
-export async function updateClinicalOrderStatus(id: string, status: ClinicalOrderStatus) {
-  const supabase = getSupabaseServerClient();
+export async function updateClinicalOrderStatus(
+  id: string,
+  status: ClinicalOrderStatus,
+): Promise<{ data: DbClinicalOrder | null; error: PostgrestError | null }> {
+  const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("clinical.clinical_orders")
@@ -91,8 +94,7 @@ export async function updateClinicalOrderStatus(id: string, status: ClinicalOrde
     .select()
     .single<DbClinicalOrder>();
 
-  if (error) throw error;
-  return data;
+  return { data: data ?? null, error };
 }
 
 // Convenience: create draft prescription, add items, and then submit for approval
@@ -100,11 +102,30 @@ export async function createPrescriptionAndSubmit(
   userId: string,
   doctorId: string,
   items: PrescriptionItemInput[],
-) {
-  const rx = await createPrescription(userId, doctorId);
+): Promise<{ data: DbPrescription | null; error: PostgrestError | null }> {
+  const created = await createPrescription(userId, doctorId);
+  if (created.error || !created.data) return { data: null, error: created.error };
+
   for (const item of items) {
-    await addPrescriptionItem(rx.id, item);
+    const added = await addPrescriptionItem(created.data.id, item);
+    if (added.error) return { data: null, error: added.error };
   }
-  const submitted = await updatePrescriptionStatus(rx.id, "awaiting_approval");
+
+  const submitted = await updatePrescriptionStatus(created.data.id, "awaiting_approval");
   return submitted;
 }
+
+// Local action-level types as requested
+export type RxStatus = "draft" | "awaiting_approval" | "approved" | "rejected";
+export type OrderStatus = "pending" | "completed" | "canceled";
+export type ClinicalOrder = {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  type: "lab" | "imaging";
+  name: string;
+  priority?: string;
+  note?: string;
+  status: OrderStatus;
+  createdAt: string;
+};

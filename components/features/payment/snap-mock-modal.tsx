@@ -70,7 +70,6 @@ export function SnapMockModal({
   onConfirmPayment,
   developerOutcomeLabel,
 }: SnapMockModalProps) {
-
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -82,6 +81,10 @@ export function SnapMockModal({
       setCopied(false);
     }
   }, []);
+
+  const handleOpenChange = useCallback((newOpen: boolean) => {
+    onOpenChange(newOpen);
+  }, [onOpenChange]);
 
   const renderChannelContent = () => {
     switch (selectedChannel) {
@@ -213,7 +216,7 @@ export function SnapMockModal({
   const isConfirmDisabled = status === "pending" || status === "success";
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <AnimatePresence>
         {open ? (
           <>

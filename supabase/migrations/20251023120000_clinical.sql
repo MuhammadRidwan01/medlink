@@ -89,44 +89,51 @@ alter table clinical.clinical_orders replica identity full;
 
 -- Policies: prescriptions
 -- Patient (user_id) can read own prescriptions
-create policy if not exists patient_read_prescriptions
+drop policy if exists patient_read_prescriptions on clinical.prescriptions;
+create policy patient_read_prescriptions
 on clinical.prescriptions
 for select
 using (user_id = auth.uid());
 
 -- Doctor (doctor_id) can read drafts
-create policy if not exists doctor_read_draft_prescriptions
+drop policy if exists doctor_read_draft_prescriptions on clinical.prescriptions;
+create policy doctor_read_draft_prescriptions
 on clinical.prescriptions
 for select
 using (doctor_id = auth.uid() and status = 'draft');
 
 -- Doctor can insert drafts they own
-create policy if not exists doctor_insert_draft_prescriptions
+drop policy if exists doctor_insert_draft_prescriptions on clinical.prescriptions;
+create policy doctor_insert_draft_prescriptions
 on clinical.prescriptions
 for insert
 with check (doctor_id = auth.uid() and status = 'draft');
 
 -- Doctor can update/delete drafts they own
-create policy if not exists doctor_write_draft_prescriptions
+drop policy if exists doctor_write_draft_prescriptions on clinical.prescriptions;
+create policy doctor_write_draft_prescriptions
 on clinical.prescriptions
 for update
 using (doctor_id = auth.uid() and status = 'draft')
 with check (doctor_id = auth.uid() and status = 'draft');
 
-create policy if not exists doctor_delete_draft_prescriptions
+drop policy if exists doctor_delete_draft_prescriptions on clinical.prescriptions;
+create policy doctor_delete_draft_prescriptions
 on clinical.prescriptions
 for delete
 using (doctor_id = auth.uid() and status = 'draft');
 
 -- Pharmacy role can read awaiting_approval prescriptions
-create policy if not exists pharmacy_read_awaiting_prescriptions
+drop policy if exists pharmacy_read_awaiting_prescriptions on clinical.prescriptions;
+create policy pharmacy_read_awaiting_prescriptions
 on clinical.prescriptions
 for select
 using ((auth.jwt() ->> 'role') = 'pharmacy' and status = 'awaiting_approval');
 
 -- Policies: prescription_items
 -- Patient can read items of their prescriptions
-create policy if not exists patient_read_prescription_items
+drop policy if exists patient_read_prescription_items on clinical.prescription_items;
+create policy patient_read_prescription_items
 on clinical.prescription_items
 for select
 using (exists (
@@ -135,7 +142,8 @@ using (exists (
 ));
 
 -- Doctor can read items of draft prescriptions they own
-create policy if not exists doctor_read_draft_prescription_items
+drop policy if exists doctor_read_draft_prescription_items on clinical.prescription_items;
+create policy doctor_read_draft_prescription_items
 on clinical.prescription_items
 for select
 using (exists (
@@ -144,7 +152,8 @@ using (exists (
 ));
 
 -- Doctor can insert/update/delete items for draft prescriptions they own
-create policy if not exists doctor_insert_draft_prescription_items
+drop policy if exists doctor_insert_draft_prescription_items on clinical.prescription_items;
+create policy doctor_insert_draft_prescription_items
 on clinical.prescription_items
 for insert
 with check (exists (
@@ -152,7 +161,8 @@ with check (exists (
   where p.id = prescription_id and p.doctor_id = auth.uid() and p.status = 'draft'
 ));
 
-create policy if not exists doctor_update_draft_prescription_items
+drop policy if exists doctor_update_draft_prescription_items on clinical.prescription_items;
+create policy doctor_update_draft_prescription_items
 on clinical.prescription_items
 for update
 using (exists (
@@ -164,7 +174,8 @@ with check (exists (
   where p.id = prescription_id and p.doctor_id = auth.uid() and p.status = 'draft'
 ));
 
-create policy if not exists doctor_delete_draft_prescription_items
+drop policy if exists doctor_delete_draft_prescription_items on clinical.prescription_items;
+create policy doctor_delete_draft_prescription_items
 on clinical.prescription_items
 for delete
 using (exists (
@@ -173,7 +184,8 @@ using (exists (
 ));
 
 -- Pharmacy role can read items for prescriptions awaiting approval
-create policy if not exists pharmacy_read_prescription_items_for_approval
+drop policy if exists pharmacy_read_prescription_items_for_approval on clinical.prescription_items;
+create policy pharmacy_read_prescription_items_for_approval
 on clinical.prescription_items
 for select
 using ((auth.jwt() ->> 'role') = 'pharmacy' and exists (
@@ -183,7 +195,8 @@ using ((auth.jwt() ->> 'role') = 'pharmacy' and exists (
 
 -- Policies: approvals
 -- Patient and Doctor can read approvals for their prescriptions; Pharmacy can also read
-create policy if not exists read_approvals_by_stakeholders
+drop policy if exists read_approvals_by_stakeholders on clinical.approvals;
+create policy read_approvals_by_stakeholders
 on clinical.approvals
 for select
 using (
@@ -195,7 +208,8 @@ using (
 );
 
 -- Pharmacy role can update approval status
-create policy if not exists pharmacy_update_approvals
+drop policy if exists pharmacy_update_approvals on clinical.approvals;
+create policy pharmacy_update_approvals
 on clinical.approvals
 for update
 using ((auth.jwt() ->> 'role') = 'pharmacy')
@@ -203,30 +217,35 @@ with check ((auth.jwt() ->> 'role') = 'pharmacy');
 
 -- Policies: clinical_orders
 -- Patient reads their own orders
-create policy if not exists patient_read_own_orders
+drop policy if exists patient_read_own_orders on clinical.clinical_orders;
+create policy patient_read_own_orders
 on clinical.clinical_orders
 for select
 using (patient_id = auth.uid());
 
 -- Doctor can read own orders
-create policy if not exists doctor_read_own_orders
+drop policy if exists doctor_read_own_orders on clinical.clinical_orders;
+create policy doctor_read_own_orders
 on clinical.clinical_orders
 for select
 using (doctor_id = auth.uid());
 
 -- Doctor writes (insert/update/delete) orders they own
-create policy if not exists doctor_insert_orders
+drop policy if exists doctor_insert_orders on clinical.clinical_orders;
+create policy doctor_insert_orders
 on clinical.clinical_orders
 for insert
 with check (doctor_id = auth.uid());
 
-create policy if not exists doctor_update_orders
+drop policy if exists doctor_update_orders on clinical.clinical_orders;
+create policy doctor_update_orders
 on clinical.clinical_orders
 for update
 using (doctor_id = auth.uid())
 with check (doctor_id = auth.uid());
 
-create policy if not exists doctor_delete_orders
+drop policy if exists doctor_delete_orders on clinical.clinical_orders;
+create policy doctor_delete_orders
 on clinical.clinical_orders
 for delete
 using (doctor_id = auth.uid());

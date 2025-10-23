@@ -36,7 +36,7 @@ function buildDefaultMessage(ci: ProductContraindication) {
 
 async function fetchSnapshot(): Promise<MarketplaceSafetySnapshot> {
   try {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -49,27 +49,28 @@ async function fetchSnapshot(): Promise<MarketplaceSafetySnapshot> {
       };
     }
 
-    const { data, error } = await supabase
-      .from("patient_profile_snapshots")
-      .select("allergies, medications")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // Fetch allergies and medications from separate tables
+    const [allergiesResult, medicationsResult] = await Promise.all([
+      supabase
+        .from("allergies")
+        .select("substance")
+        .eq("user_id", user.id),
+      supabase
+        .from("meds")
+        .select("name")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+    ]);
 
-    if (error) {
-      console.error("Failed to load Supabase snapshot", error);
-      return {
-        allergies: PATIENT_CONTEXT.allergies,
-        medications: PATIENT_CONTEXT.medications,
-        source: "fallback",
-      };
+    if (allergiesResult.error) {
+      console.error("Failed to load allergies", allergiesResult.error);
+    }
+    if (medicationsResult.error) {
+      console.error("Failed to load medications", medicationsResult.error);
     }
 
-    const allergies = Array.isArray(data?.allergies)
-      ? (data?.allergies as string[])
-      : PATIENT_CONTEXT.allergies;
-    const medications = Array.isArray(data?.medications)
-      ? (data?.medications as string[])
-      : PATIENT_CONTEXT.medications;
+    const allergies = allergiesResult.data?.map((item: { substance: string }) => item.substance) ?? PATIENT_CONTEXT.allergies;
+    const medications = medicationsResult.data?.map((item: { name: string }) => item.name) ?? PATIENT_CONTEXT.medications;
 
     return {
       allergies,

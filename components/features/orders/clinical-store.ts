@@ -130,7 +130,7 @@ export function upsertDbClinicalOrder(row: DbClinicalOrder) {
     patient: "(unknown)",
     date: row.created_at,
     status: row.status === "completed" ? "completed" : "pending",
-    priority: (row.priority as any) || "normal",
+    priority: (row.priority as "normal" | "high" | "stat") || "normal",
     note: row.note || undefined,
     images: row.type === "imaging" ? [] : [],
     timeline: [{ id: "t1", label: "Dipesan", timestamp: row.created_at }],

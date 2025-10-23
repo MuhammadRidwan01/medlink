@@ -118,15 +118,12 @@ export const usePaymentStore = create<PaymentStore>()(
             quantity: item.quantity,
           }));
 
-          const { orderId, paymentId, total: serverTotal } = await checkoutAction({
+          const { orderId, paymentId } = await checkoutAction({
             items: cartPayload,
           });
 
           const computedTotal = Math.max(subtotal + shipping - discount, 0);
-          const normalizedServerTotal = Number(serverTotal);
-          const reconciledTotal = Number.isFinite(normalizedServerTotal)
-            ? normalizedServerTotal
-            : computedTotal;
+          const reconciledTotal = computedTotal;
 
           const order: PaymentOrder = {
             id: orderId,

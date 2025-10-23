@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { createFocusScope } from "@/lib/utils";
 
 type Props = {
   open: boolean;
@@ -12,17 +13,24 @@ type Props = {
 
 export function ApproveRejectDialog({ open, mode, onClose, onConfirm }: Props) {
   const [note, setNote] = useState("");
-  const firstRef = useRef<HTMLButtonElement | null>(null);
-  const prevFocus = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const focusScope = createFocusScope();
+  const cleanupFocusRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (open) {
-      prevFocus.current = document.activeElement as HTMLElement;
-      setTimeout(() => firstRef.current?.focus(), 0);
-    } else {
-      prevFocus.current?.focus();
+    if (open && dialogRef.current) {
+      cleanupFocusRef.current = focusScope.trap(dialogRef.current);
+    } else if (cleanupFocusRef.current) {
+      cleanupFocusRef.current();
+      cleanupFocusRef.current = null;
     }
-  }, [open]);
+    
+    return () => {
+      if (cleanupFocusRef.current) {
+        cleanupFocusRef.current();
+      }
+    };
+  }, [open, focusScope]);
 
   useEffect(() => {
     if (!open) return;
@@ -43,7 +51,7 @@ export function ApproveRejectDialog({ open, mode, onClose, onConfirm }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.16, ease: [0.2, 0.8, 0.2, 1] }}
             onClick={onClose}
             aria-hidden="true"
           />
@@ -56,9 +64,9 @@ export function ApproveRejectDialog({ open, mode, onClose, onConfirm }: Props) {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.16, ease: [0.2, 0.8, 0.2, 1] }}
           >
-            <div className="w-full max-w-sm rounded-card border border-border/60 bg-card p-4 shadow-xl">
+            <div ref={dialogRef} className="w-full max-w-sm rounded-card border border-border/60 bg-card p-4 shadow-xl">
               <h3 className="text-sm font-semibold text-foreground">
                 {mode === "approve" ? "Setujui resep ini?" : "Tolak resep ini?"}
               </h3>
@@ -78,7 +86,6 @@ export function ApproveRejectDialog({ open, mode, onClose, onConfirm }: Props) {
               </label>
               <div className="mt-4 flex items-center justify-end gap-2">
                 <button
-                  ref={firstRef}
                   className="tap-target inline-flex items-center justify-center rounded-button border border-border/70 bg-muted/40 px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={onClose}
                 >

@@ -70,25 +70,30 @@ alter table commerce.payments enable row level security;
 alter table commerce.orders enable row level security;
 alter table commerce.order_items enable row level security;
 
+drop policy if exists "Public read access" on commerce.products;
 create policy "Public read access" on commerce.products
     for select
     using (true);
 
+drop policy if exists "Service role manages products" on commerce.products;
 create policy "Service role manages products" on commerce.products
     for all
     using (auth.role() = 'service_role')
     with check (auth.role() = 'service_role');
 
+drop policy if exists "Users manage own carts" on commerce.carts;
 create policy "Users manage own carts" on commerce.carts
     for all
     using (user_id = auth.uid())
     with check (user_id = auth.uid());
 
+drop policy if exists "Service role manages carts" on commerce.carts;
 create policy "Service role manages carts" on commerce.carts
     for all
     using (auth.role() = 'service_role')
     with check (auth.role() = 'service_role');
 
+drop policy if exists "Users manage own cart items" on commerce.cart_items;
 create policy "Users manage own cart items" on commerce.cart_items
     for all
     using (
@@ -108,21 +113,25 @@ create policy "Users manage own cart items" on commerce.cart_items
         )
     );
 
+drop policy if exists "Service role manages cart items" on commerce.cart_items;
 create policy "Service role manages cart items" on commerce.cart_items
     for all
     using (auth.role() = 'service_role')
     with check (auth.role() = 'service_role');
 
+drop policy if exists "Users manage own orders" on commerce.orders;
 create policy "Users manage own orders" on commerce.orders
     for all
     using (user_id = auth.uid())
     with check (user_id = auth.uid());
 
+drop policy if exists "Service role manages orders" on commerce.orders;
 create policy "Service role manages orders" on commerce.orders
     for all
     using (auth.role() = 'service_role')
     with check (auth.role() = 'service_role');
 
+drop policy if exists "Users manage own order items" on commerce.order_items;
 create policy "Users manage own order items" on commerce.order_items
     for all
     using (
@@ -142,11 +151,13 @@ create policy "Users manage own order items" on commerce.order_items
         )
     );
 
+drop policy if exists "Service role manages order items" on commerce.order_items;
 create policy "Service role manages order items" on commerce.order_items
     for all
     using (auth.role() = 'service_role')
     with check (auth.role() = 'service_role');
 
+drop policy if exists "Users manage own payments" on commerce.payments;
 create policy "Users manage own payments" on commerce.payments
     for all
     using (user_id = auth.uid())
@@ -163,6 +174,7 @@ create policy "Users manage own payments" on commerce.payments
         )
     );
 
+drop policy if exists "Service role manages payments" on commerce.payments;
 create policy "Service role manages payments" on commerce.payments
     for all
     using (auth.role() = 'service_role')

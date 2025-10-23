@@ -13,11 +13,7 @@ type CheckoutPayload = {
   snapToken?: string | null;
 };
 
-type CheckoutResult = {
-  orderId: string;
-  paymentId: string;
-  total: number;
-};
+type CheckoutResult = { orderId: string; paymentId: string };
 
 const isValidUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -88,7 +84,7 @@ export async function checkoutAction(payload: CheckoutPayload): Promise<Checkout
 
     cartId = cart.id;
 
-    if (!isValidUUID(cartId)) {
+    if (!cartId || !isValidUUID(cartId)) {
       throw new Error('Gagal membuat keranjang.');
     }
 
@@ -98,13 +94,15 @@ export async function checkoutAction(payload: CheckoutPayload): Promise<Checkout
         throw new Error(`Produk ${item.slug} tidak ditemukan.`);
       }
       return {
-        cart_id: cartId!,
+        cart_id: cartId,
         product_id: product.id,
         qty: item.quantity,
       };
     });
 
-    const { error: cartItemsError } = await supabase.from('commerce.cart_items').insert(cartItemsPayload);
+    const { error: cartItemsError } = await supabase
+      .from('commerce.cart_items')
+      .insert(cartItemsPayload);
     if (cartItemsError) {
       throw cartItemsError;
     }
@@ -132,7 +130,7 @@ export async function checkoutAction(payload: CheckoutPayload): Promise<Checkout
 
     orderId = createdOrder.id;
 
-    if (!isValidUUID(orderId)) {
+    if (!orderId || !isValidUUID(orderId)) {
       throw new Error('Gagal membuat pesanan baru.');
     }
 
@@ -143,14 +141,16 @@ export async function checkoutAction(payload: CheckoutPayload): Promise<Checkout
       }
 
       return {
-        order_id: orderId!,
+        order_id: orderId,
         product_id: product.id,
         qty: item.quantity,
         price: product.price,
       };
     });
 
-    const { error: orderItemsError } = await supabase.from('commerce.order_items').insert(orderItemsPayload);
+    const { error: orderItemsError } = await supabase
+      .from('commerce.order_items')
+      .insert(orderItemsPayload);
     if (orderItemsError) {
       throw orderItemsError;
     }
@@ -173,24 +173,44 @@ export async function checkoutAction(payload: CheckoutPayload): Promise<Checkout
 
     paymentId = payment.id;
 
-    if (!isValidUUID(paymentId)) {
+    if (!paymentId || !isValidUUID(paymentId)) {
       throw new Error('Gagal membuat transaksi pembayaran.');
     }
 
-    return {
-      orderId,
-      paymentId,
-      total,
-    };
+    return { orderId, paymentId };
   } catch (error) {
-    if (orderId) {
-      await supabase.from('commerce.order_items').delete().eq('order_id', orderId);
-      await supabase.from('commerce.orders').delete().eq('id', orderId);
+    if (orderId && isValidUUID(orderId)) {
+      const { error: delOrderItemsError } = await supabase
+        .from('commerce.order_items')
+        .delete()
+        .eq('order_id', orderId);
+      if (delOrderItemsError) {
+        console.error('[checkoutAction] failed to cleanup order_items', delOrderItemsError);
+      }
+      const { error: delOrderError } = await supabase
+        .from('commerce.orders')
+        .delete()
+        .eq('id', orderId);
+      if (delOrderError) {
+        console.error('[checkoutAction] failed to cleanup orders', delOrderError);
+      }
     }
 
-    if (cartId) {
-      await supabase.from('commerce.cart_items').delete().eq('cart_id', cartId);
-      await supabase.from('commerce.carts').delete().eq('id', cartId);
+    if (cartId && isValidUUID(cartId)) {
+      const { error: delCartItemsError } = await supabase
+        .from('commerce.cart_items')
+        .delete()
+        .eq('cart_id', cartId);
+      if (delCartItemsError) {
+        console.error('[checkoutAction] failed to cleanup cart_items', delCartItemsError);
+      }
+      const { error: delCartError } = await supabase
+        .from('commerce.carts')
+        .delete()
+        .eq('id', cartId);
+      if (delCartError) {
+        console.error('[checkoutAction] failed to cleanup carts', delCartError);
+      }
     }
 
     throw error instanceof Error ? error : new Error('Checkout gagal. Silakan coba lagi.');

@@ -214,7 +214,7 @@ const fetchSnapshot = async (
   });
 };
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const supabase = await getSupabaseServerClient();
   const {
     data: { user },
@@ -254,7 +254,8 @@ export async function POST(request: NextRequest) {
   let body: MutationBody | null = null;
   try {
     body = (await request.json()) as MutationBody;
-  } catch (parseError) {
+  } catch (_parseError) {
+    console.error('[snapshot] JSON parse failed:', _parseError);
     return NextResponse.json({ message: 'Payload must be valid JSON' }, { status: 400 });
   }
 
