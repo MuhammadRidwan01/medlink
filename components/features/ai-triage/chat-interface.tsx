@@ -6,15 +6,30 @@ import { AlertTriangle, ArrowDown, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatMessage, type ChatMessageProps } from "./chat-message";
 import { QuickReplies, type QuickReply } from "./quick-replies";
-import type { RiskLevel } from "./risk-badge";
 import { SymptomSummary } from "./symptom-summary";
+import {
+  type Allergy,
+  type Medication,
+  type ProfileSummary,
+  useProfileStore,
+} from "@/components/features/profile/store";
+import {
+  createEmptyTriageSummary,
+  formatTriageTimestamp,
+  parseTriageInsight,
+  type RiskLevel,
+  type TriageSummary,
+} from "@/types/triage";
 
-type ParsedInsight = {
-  riskLevel: RiskLevel;
-  symptoms: string[];
-  duration: string;
-  redFlags: string[];
-  updatedAt: string;
+type ApiChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+type LatestUserMessagePayload = {
+  id: string;
+  content: string;
+  createdAt: string;
 };
 
 type BannerState = {
@@ -24,25 +39,37 @@ type BannerState = {
   hasShaken: boolean;
 };
 
-const initialMessages: ChatMessageProps[] = [
-  {
-    id: "msg-ai-1",
-    role: "ai",
-    content:
-      "Halo, saya MedLink AI. Saya akan menanyakan beberapa pertanyaan untuk memahami kondisi Anda. Dokter akan meninjau hasil akhirnya.",
-    timestamp: "09:02",
-  },
-];
+type PatientContextPayload = {
+  profile?: {
+    name?: string;
+    age?: string;
+    sex?: string;
+    bloodType?: string;
+  };
+  allergies?: string[];
+  medications?: Array<{
+    name: string;
+    strength?: string;
+    frequency?: string;
+  }>;
+};
 
-const initialSummary: ParsedInsight = {
-  riskLevel: "low",
-  symptoms: ["Belum ada data"],
-  duration: "Belum diketahui",
-  redFlags: [],
-  updatedAt: new Date().toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }),
+type TriageRequestContext = {
+  patient?: PatientContextPayload;
+  triageSummary?: {
+    riskLevel: RiskLevel;
+    symptoms: string[];
+    duration: string;
+    redFlags: string[];
+  };
+};
+
+type ChatInterfaceProps = {
+  initialSession?: {
+    id: string;
+    summary: TriageSummary;
+    messages: ChatMessageProps[];
+  };
 };
 
 const quickReplyPresets: QuickReply[] = [
@@ -52,11 +79,27 @@ const quickReplyPresets: QuickReply[] = [
   { id: "qr-4", label: "Sakit kepala berat", variant: "quiet" },
 ];
 
-export function ChatInterface() {
-  const [messages, setMessages] = useState<ChatMessageProps[]>(initialMessages);
+export function ChatInterface({ initialSession }: ChatInterfaceProps) {
+  const [sessionId, setSessionId] = useState<string | null>(initialSession?.id ?? null);
+  const [messages, setMessages] = useState<ChatMessageProps[]>(() => {
+    if (initialSession?.messages?.length) {
+      return initialSession.messages;
+    }
+    return [
+      {
+        id: "msg-ai-welcome",
+        role: "ai",
+        content:
+          "Halo, saya MedLink AI. Saya akan menanyakan beberapa pertanyaan untuk memahami kondisi Anda. Dokter akan meninjau hasil akhirnya.",
+        timestamp: formatTriageTimestamp(new Date()),
+      },
+    ];
+  });
   const [inputValue, setInputValue] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [summary, setSummary] = useState(initialSummary);
+  const [summary, setSummary] = useState<TriageSummary>(
+    () => initialSession?.summary ?? createEmptyTriageSummary(),
+  );
   const [banner, setBanner] = useState<BannerState>({
     visible: false,
     severity: "warning",
@@ -66,7 +109,6 @@ export function ChatInterface() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [showJumpToNew, setShowJumpToNew] = useState(false);
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
-  const [noteSnapshot, setNoteSnapshot] = useState<ParsedInsight | null>(null);
 
   const quickReplies = useMemo(() => quickReplyPresets, []);
 
@@ -74,12 +116,44 @@ export function ChatInterface() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const sendButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastMessageIdRef = useRef<string | null>(
-    initialMessages[initialMessages.length - 1]?.id ?? null,
+    initialSession?.messages?.[initialSession.messages.length - 1]?.id ?? messages.at(-1)?.id ?? null,
   );
 
   const [isAtBottom, setIsAtBottom] = useState(true);
 
   useEffect(() => setIsHydrated(true), []);
+
+  const profile = useProfileStore((state) => state.profile);
+  const allergies = useProfileStore((state) => state.allergies);
+  const medications = useProfileStore((state) => state.medications);
+  const profileLoading = useProfileStore((state) => state.loading);
+  const fetchProfileSnapshot = useProfileStore((state) => state.fetchSnapshot);
+  const hasRequestedSnapshotRef = useRef(false);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    const hasPatientData =
+      Boolean(profile) || (allergies?.length ?? 0) > 0 || (medications?.length ?? 0) > 0;
+
+    if (hasPatientData || profileLoading || hasRequestedSnapshotRef.current) {
+      return;
+    }
+
+    hasRequestedSnapshotRef.current = true;
+    fetchProfileSnapshot()
+      .then(() => {
+        hasRequestedSnapshotRef.current = true;
+      })
+      .catch((error) => {
+        console.warn("Failed to hydrate patient snapshot for triage:", error);
+        hasRequestedSnapshotRef.current = false;
+      });
+  }, [isHydrated, profile, allergies, medications, profileLoading, fetchProfileSnapshot]);
+
+  const patientContext = useMemo(
+    () => buildPatientContext({ profile, allergies, medications }),
+    [profile, allergies, medications],
+  );
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -112,11 +186,10 @@ export function ChatInterface() {
 
   useEffect(() => {
     if (!isHydrated) {
-      const latest = messages[messages.length - 1];
-      lastMessageIdRef.current = latest?.id ?? null;
+      lastMessageIdRef.current = messages.at(-1)?.id ?? null;
       return;
     }
-    const latest = messages[messages.length - 1];
+    const latest = messages.at(-1);
     const lastId = latest?.id ?? null;
     const prevId = lastMessageIdRef.current;
     const isNewMessage = Boolean(lastId && lastId !== prevId);
@@ -132,15 +205,6 @@ export function ChatInterface() {
     }
   }, [messages, isAtBottom, scrollToBottom, isHydrated]);
 
-  useEffect(() => {
-    if (!noteSnapshot) return;
-    try {
-      window.sessionStorage.setItem("medlink-note-snapshot", JSON.stringify(noteSnapshot));
-    } catch {
-      // ignore storage failures silently
-    }
-  }, [noteSnapshot]);
-
   const addMessage = useCallback((message: ChatMessageProps) => {
     setMessages((prev) => [...prev, message]);
   }, []);
@@ -153,19 +217,21 @@ export function ChatInterface() {
 
   const handleSendMessage = useCallback(
     async (text: string) => {
-      if (!text.trim() || isStreaming) {
+      const trimmed = text.trim();
+      if (!trimmed || isStreaming) {
         return;
       }
 
+      const now = new Date();
+      const clientMessageId = `msg-user-${now.getTime()}`;
       const userMessage: ChatMessageProps = {
-        id: `msg-user-${Date.now()}`,
+        id: clientMessageId,
         role: "user",
-        content: text.trim(),
-        timestamp: new Date().toLocaleTimeString("id-ID", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        content: trimmed,
+        timestamp: formatTriageTimestamp(now),
       };
+
+      const history = buildChatHistory([...messages, userMessage]);
 
       addMessage(userMessage);
       setInputValue("");
@@ -180,19 +246,39 @@ export function ChatInterface() {
         isTyping: true,
       });
 
-      await playFakeStream({
-        aiMessageId,
-        updateMessage,
-        setSummary,
-        setBanner,
-        previousSummary: summary,
-        setNoteSnapshot,
-      });
-
-      setIsStreaming(false);
-      sendButtonRef.current?.focus();
+      try {
+        await streamTriageResponse({
+          aiMessageId,
+          sessionId,
+          setSessionId,
+          latestUserMessage: {
+            id: clientMessageId,
+            content: trimmed,
+            createdAt: now.toISOString(),
+          },
+          updateMessage,
+          setSummary,
+          setBanner,
+          previousSummary: summary,
+          context: buildRequestContext(patientContext, summary),
+          history,
+        });
+      } finally {
+        setIsStreaming(false);
+        sendButtonRef.current?.focus();
+      }
     },
-    [addMessage, isStreaming, summary, updateMessage, setSummary, setBanner],
+    [
+      addMessage,
+      isStreaming,
+      messages,
+      summary,
+      updateMessage,
+      setSummary,
+      setBanner,
+      patientContext,
+      sessionId,
+    ],
   );
 
   const handleQuickReply = useCallback(
@@ -304,11 +390,7 @@ export function ChatInterface() {
           </div>
 
           <div className="border-t border-border/70 bg-background/95 px-4 py-4 safe-area-bottom md:px-6">
-            <QuickReplies
-              options={quickReplies}
-              onSelect={handleQuickReply}
-              disabled={isStreaming}
-            />
+            <QuickReplies options={quickReplies} onSelect={handleQuickReply} disabled={isStreaming} />
             <form
               className="mt-4 flex items-end gap-3"
               onSubmit={(event) => {
@@ -349,131 +431,239 @@ export function ChatInterface() {
 
 type StreamParams = {
   aiMessageId: string;
+  sessionId: string | null;
+  setSessionId: (id: string) => void;
+  latestUserMessage: LatestUserMessagePayload;
   updateMessage: (id: string, updater: Partial<ChatMessageProps>) => void;
-  setSummary: React.Dispatch<React.SetStateAction<ParsedInsight>>;
+  setSummary: React.Dispatch<React.SetStateAction<TriageSummary>>;
   setBanner: React.Dispatch<React.SetStateAction<BannerState>>;
-  previousSummary: ParsedInsight;
-  setNoteSnapshot: React.Dispatch<React.SetStateAction<ParsedInsight | null>>;
+  previousSummary: TriageSummary;
+  context: TriageRequestContext | null;
+  history: ApiChatMessage[];
 };
 
-async function playFakeStream({
+async function streamTriageResponse({
   aiMessageId,
+  sessionId,
+  setSessionId,
+  latestUserMessage,
   updateMessage,
   setSummary,
   setBanner,
   previousSummary,
-  setNoteSnapshot,
+  context,
+  history,
 }: StreamParams) {
-  const segments: Array<{ type: "text" | "json"; value: string }> = [
-    {
-      type: "text",
-      value:
-        "Terima kasih atas informasinya. Saya akan menanyakan beberapa hal untuk memastikan tidak ada kondisi gawat darurat.\n\n",
-    },
-    {
-      type: "text",
-      value:
-        "Apakah nyeri dada muncul saat istirahat atau ketika beraktivitas? Beritahu juga jika ada sesak napas berat.\n\n",
-    },
-    {
-      type: "json",
-      value: JSON.stringify(
-        {
-          riskLevel: "moderate",
-          symptoms: ["Demam", "Nyeri dada ringan", "Sesak napas ringan"],
-          duration: "2 hari",
-          redFlags: ["Nyeri dada menjalar ke lengan kiri"],
-        },
-        null,
-        2,
-      ),
-    },
-  ];
-
-  let aggregated = "";
-  let isRevealed = false;
-
-  await wait(240);
-
-  for (const segment of segments) {
-    if (segment.type === "text") {
-      for (const token of segment.value.split("")) {
-        aggregated += token;
-        if (!isRevealed) {
-          updateMessage(aiMessageId, { content: aggregated, isTyping: false });
-          isRevealed = true;
-        } else {
-          updateMessage(aiMessageId, { content: aggregated });
-        }
-        await wait(26);
-      }
-    } else {
-      aggregated += `\n${segment.value}\n`;
-      updateMessage(aiMessageId, { content: aggregated });
-      await wait(18);
-    }
+  if (!history.length) {
+    updateMessage(aiMessageId, {
+      content: "Maaf, saya belum menerima konteks percakapan. Silakan coba kirim ulang pertanyaannya.",
+      isTyping: false,
+      timestamp: formatTriageTimestamp(new Date()),
+    });
+    return;
   }
 
-  const parsedInsight = parseInsight(aggregated, previousSummary);
-  setSummary(parsedInsight);
-  setNoteSnapshot(parsedInsight);
+  try {
+    const response = await fetch("/api/ai/triage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId,
+        latestUserMessage,
+        messages: history,
+        context,
+      }),
+    });
 
-  updateMessage(aiMessageId, {
-    content: aggregated.trimEnd(),
-    isTyping: false,
-    timestamp: new Date().toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-    riskLevel: parsedInsight.riskLevel,
-    redFlag: parsedInsight.redFlags[0],
-  });
+    if (!response.ok || !response.body) {
+      throw new Error(`AI request failed with status ${response.status}`);
+    }
 
-  if (parsedInsight.redFlags.length > 0 || parsedInsight.riskLevel === "high" || parsedInsight.riskLevel === "emergency") {
-    setBanner((prev) => ({
-      visible: true,
-      severity:
-        parsedInsight.riskLevel === "high" || parsedInsight.riskLevel === "emergency"
-          ? "danger"
-          : "warning",
-      message:
-        parsedInsight.riskLevel === "high" || parsedInsight.riskLevel === "emergency"
-          ? "AI mendeteksi tanda yang membutuhkan perhatian segera. Dokter sedang dihubungi."
-          : "AI menemukan indikasi yang perlu ditinjau dokter lebih lanjut.",
-      hasShaken: prev.hasShaken,
-    }));
-  } else {
+    const headerSessionId = response.headers.get("x-triage-session");
+    if (headerSessionId) {
+      setSessionId(headerSessionId);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const timestamp = formatTriageTimestamp(new Date());
+    let aggregated = "";
+    let isFirstChunk = true;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      aggregated += decoder.decode(value, { stream: true });
+
+      if (isFirstChunk) {
+        updateMessage(aiMessageId, { content: aggregated, isTyping: false });
+        isFirstChunk = false;
+      } else {
+        updateMessage(aiMessageId, { content: aggregated });
+      }
+    }
+
+    aggregated += decoder.decode();
+    reader.releaseLock();
+
+    const parsedInsight = parseTriageInsight(aggregated, previousSummary);
+    setSummary(parsedInsight);
+
+    updateMessage(aiMessageId, {
+      content: aggregated.trim(),
+      isTyping: false,
+      timestamp,
+      riskLevel: parsedInsight.riskLevel,
+      redFlag: parsedInsight.redFlags[0],
+    });
+
+    const shouldAlert =
+      parsedInsight.redFlags.length > 0 ||
+      parsedInsight.riskLevel === "high" ||
+      parsedInsight.riskLevel === "emergency";
+
+    if (shouldAlert) {
+      setBanner({
+        visible: true,
+        severity:
+          parsedInsight.riskLevel === "high" || parsedInsight.riskLevel === "emergency"
+            ? "danger"
+            : "warning",
+        message:
+          parsedInsight.riskLevel === "high" || parsedInsight.riskLevel === "emergency"
+            ? "AI mendeteksi tanda risiko tinggi. Dokter sedang dihubungi."
+            : "AI menemukan indikasi yang perlu ditinjau dokter lebih lanjut.",
+        hasShaken: false,
+      });
+    } else {
+      setBanner((prev) => ({ ...prev, visible: false }));
+    }
+  } catch (error) {
+    console.error("AI triage stream failed:", error);
+    updateMessage(aiMessageId, {
+      content:
+        "Maaf, layanan AI sedang mengalami gangguan. Silakan coba lagi sebentar lagi atau lanjutkan ke konsultasi dokter.",
+      isTyping: false,
+      timestamp: formatTriageTimestamp(new Date()),
+    });
+    setSummary((prev) => ({ ...prev, updatedAt: new Date().toISOString() }));
     setBanner((prev) => ({ ...prev, visible: false }));
   }
 }
 
-function parseInsight(message: string, fallback: ParsedInsight): ParsedInsight {
-  const jsonMatch = message.match(/\{[\s\S]*\}$/);
-  if (!jsonMatch) {
-    return { ...fallback, updatedAt: timeNow() };
+function buildChatHistory(messages: ChatMessageProps[]): ApiChatMessage[] {
+  const history: ApiChatMessage[] = [];
+  for (const message of messages) {
+    if (message.role !== "user" && message.role !== "ai") {
+      continue;
+    }
+    const content = message.content.trim();
+    if (!content) {
+      continue;
+    }
+    history.push({
+      role: message.role === "user" ? "user" : "assistant",
+      content,
+    });
   }
+  return history.slice(-16);
+}
 
-  try {
-    const parsed = JSON.parse(jsonMatch[0]) as Partial<ParsedInsight>;
-    return {
-      riskLevel: parsed.riskLevel ?? fallback.riskLevel,
-      symptoms: parsed.symptoms?.length ? parsed.symptoms : fallback.symptoms,
-      duration: parsed.duration ?? fallback.duration,
-      redFlags: parsed.redFlags ?? [],
-      updatedAt: timeNow(),
+function buildPatientContext({
+  profile,
+  allergies,
+  medications,
+}: {
+  profile: ProfileSummary | null;
+  allergies: Allergy[];
+  medications: Medication[];
+}): PatientContextPayload | null {
+  const context: PatientContextPayload = {};
+
+  if (profile) {
+    const age = profile.dob ? formatAge(profile.dob) : undefined;
+    context.profile = {
+      name: profile.name ?? undefined,
+      age,
+      sex: profile.sex ?? undefined,
+      bloodType: profile.bloodType ?? undefined,
     };
-  } catch {
-    return { ...fallback, updatedAt: timeNow() };
   }
+
+  if (allergies.length > 0) {
+    context.allergies = allergies.map((item) => {
+      const reaction = item.reaction ? ` (${item.reaction})` : "";
+      return `${item.substance}${reaction} - ${item.severity}`;
+    });
+  }
+
+  const activeMeds = medications.filter((item) => item.status === "active");
+  if (activeMeds.length > 0) {
+    context.medications = activeMeds.map((item) => ({
+      name: item.name,
+      strength: item.strength || undefined,
+      frequency: item.frequency || undefined,
+    }));
+  }
+
+  if (
+    !context.profile &&
+    (!context.allergies || context.allergies.length === 0) &&
+    (!context.medications || context.medications.length === 0)
+  ) {
+    return null;
+  }
+
+  return context;
 }
 
-function timeNow() {
-  return new Date().toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatAge(dob: string): string | undefined {
+  const parsed = new Date(dob);
+  if (Number.isNaN(parsed.getTime())) {
+    return undefined;
+  }
+
+  const now = new Date();
+  let age = now.getFullYear() - parsed.getFullYear();
+  const hasHadBirthdayThisYear =
+    now.getMonth() > parsed.getMonth() ||
+    (now.getMonth() === parsed.getMonth() && now.getDate() >= parsed.getDate());
+  if (!hasHadBirthdayThisYear) {
+    age -= 1;
+  }
+
+  if (age < 0 || age > 120) {
+    return undefined;
+  }
+
+  return `${age} tahun`;
 }
 
-function wait(delay: number) {
-  return new Promise((resolve) => setTimeout(resolve, delay));
+function buildRequestContext(
+  patient: PatientContextPayload | null,
+  summary: TriageSummary,
+): TriageRequestContext | null {
+  const payload: TriageRequestContext = {};
+
+  if (patient) {
+    payload.patient = patient;
+  }
+
+  if (summary) {
+    payload.triageSummary = {
+      riskLevel: summary.riskLevel,
+      symptoms: summary.symptoms,
+      duration: summary.duration,
+      redFlags: summary.redFlags,
+    };
+  }
+
+  if (!payload.patient && !payload.triageSummary) {
+    return null;
+  }
+
+  return payload;
 }

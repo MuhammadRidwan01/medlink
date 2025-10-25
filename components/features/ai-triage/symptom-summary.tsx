@@ -3,16 +3,12 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, Clock, ListTodo, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { RiskBadge, type RiskLevel } from "./risk-badge";
+import { RiskBadge } from "./risk-badge";
+import type { TriageSummary } from "@/types/triage";
+import { formatTriageTimestamp } from "@/types/triage";
 
 type SymptomSummaryProps = {
-  summary: {
-    symptoms: string[];
-    duration: string;
-    riskLevel: RiskLevel;
-    redFlags: string[];
-    updatedAt: string;
-  };
+  summary: TriageSummary;
   className?: string;
   loading?: boolean;
 };
@@ -60,7 +56,7 @@ export function SymptomSummary({ summary, className, loading }: SymptomSummaryPr
         <div>
           <p className="text-small text-muted-foreground">Ringkasan Gejala</p>
           <p className="text-tiny text-muted-foreground">
-            Diperbarui {summary.updatedAt}
+            Diperbarui {formatTriageTimestamp(summary.updatedAt)}
           </p>
         </div>
         <RiskBadge level={summary.riskLevel} />

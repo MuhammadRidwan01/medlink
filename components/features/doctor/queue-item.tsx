@@ -3,7 +3,8 @@
 import { motion } from "framer-motion";
 import { Clock3, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { RiskBadge, type RiskLevel } from "@/components/features/ai-triage/risk-badge";
+import { RiskBadge } from "@/components/features/ai-triage/risk-badge";
+import type { RiskLevel } from "@/types/triage";
 
 export type QueueStatus = "waiting" | "in-progress" | "done";
 

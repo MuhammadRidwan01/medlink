@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
-
-export type RiskLevel = "low" | "moderate" | "high" | "emergency";
+import type { RiskLevel } from "@/types/triage";
 
 const riskConfig: Record<
   RiskLevel,

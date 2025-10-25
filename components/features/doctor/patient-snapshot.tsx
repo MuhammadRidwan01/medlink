@@ -10,7 +10,8 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import type { ComponentType } from "react";
-import { RiskBadge, type RiskLevel } from "@/components/features/ai-triage/risk-badge";
+import { RiskBadge } from "@/components/features/ai-triage/risk-badge";
+import type { RiskLevel } from "@/types/triage";
 import {
   RedFlagBanner,
   type RedFlagSeverity,

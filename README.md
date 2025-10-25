@@ -43,6 +43,8 @@ Required demo vars:
 - `NEXT_PUBLIC_ANALYTICS_DEMO`: enables analytics demo mode.
 - `NEXT_PUBLIC_APPLY_MOCK_SEEDS`: applies seeds on client load.
 - `NEXT_PUBLIC_RESET_ON_BOOT`: when `true`, clears seeded keys before applying.
+- `GROQ_API_KEY`: required for live AI triage via Groq (Llama 3.1 70B).
+- `GROQ_MODEL`: optional override (defaults to `llama-3.1-70b-versatile`).
 
 ## CI (mock)
 
@@ -56,7 +58,7 @@ GitHub Actions workflow runs the same checks on PRs.
 
 ## Demo Flows
 
-- Patient triage: `patient/triage` (mock AI stream)
+- Patient triage: `patient/triage` (Groq streaming AI)
 - Checkout: `patient/checkout` (use webhook simulator to finalize)
 - Follow-up booking: via mini-scheduler components
 - Admin analytics: `admin/analytics` (requires `NEXT_PUBLIC_ANALYTICS_DEMO=true`)

@@ -4,8 +4,8 @@ import { Fragment } from "react";
 import { motion } from "framer-motion";
 import { Bot, ShieldAlert, Stethoscope, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { RiskLevel } from "./risk-badge";
 import { RiskBadge } from "./risk-badge";
+import type { RiskLevel } from "@/types/triage";
 
 export type MessageAuthor = "ai" | "user" | "doctor";
 
