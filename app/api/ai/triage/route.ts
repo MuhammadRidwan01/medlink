@@ -169,58 +169,64 @@ export async function POST(request: Request) {
   let accumulated = "";
 
   const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const reader = groqResponse.body!.getReader();
-      let isClosed = false;
-      let completed = false;
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            completed = true;
-            break;
+  async start(controller) {
+    const reader = groqResponse.body!.getReader();
+    let isClosed = false;
+    let completed = false;
+    
+    // Define safeClose helper function
+    const safeClose = () => {
+      if (!isClosed) {
+        controller.close();
+        isClosed = true;
+      }
+    };
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          completed = true;
+          break;
+        }
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data:")) {
+            continue;
           }
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
 
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith("data:")) {
-              continue;
+          const data = trimmed.slice(5).trim();
+          if (!data || data === "[DONE]") {
+            if (data === "[DONE]") {
+              safeClose();
+              return;
             }
+            continue;
+          }
 
-            const data = trimmed.slice(5).trim();
-            if (!data || data === "[DONE]") {
-              if (data === "[DONE]") {
-                safeClose();
-                return;
-              }
-              continue;
+          try {
+            const parsed = JSON.parse(data) as {
+              choices?: Array<{ delta?: { content?: string } }>;
+            };
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              accumulated += delta;
+              controller.enqueue(encoder.encode(delta));
             }
-
-            try {
-              const parsed = JSON.parse(data) as {
-                choices?: Array<{ delta?: { content?: string } }>;
-              };
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) {
-                accumulated += delta;
-                controller.enqueue(encoder.encode(delta));
-              }
-            } catch (error) {
-              console.warn("Failed to parse Groq SSE chunk:", error, data);
-            }
+          } catch (error) {
+            console.warn("Failed to parse Groq SSE chunk:", error, data);
           }
         }
-      } catch (error) {
-        controller.error(error);
-      } finally {
-        reader.releaseLock();
-        if (!isClosed) {
-          controller.close();
-          isClosed = true;
-        }
-        if (completed && accumulated.trim()) {
+      }
+    } catch (error) {
+      controller.error(error);
+    } finally {
+      reader.releaseLock();
+      safeClose(); 
+      if (completed && accumulated.trim()) {
           const parsedSummary = parseTriageInsight(accumulated, sessionSummary);
           await Promise.all([
             supabase
