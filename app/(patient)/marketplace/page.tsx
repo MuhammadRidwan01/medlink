@@ -5,7 +5,7 @@ import {
   Activity,
   AlertTriangle,
   ArrowRight,
-  Globe,
+  Database,
   HeartPulse,
   Loader2,
   ShieldAlert,
@@ -18,11 +18,7 @@ import { CartTrigger } from "@/components/features/marketplace/cart/cart-trigger
 import { CategoryTabs } from "@/components/features/marketplace/category-tabs";
 import { MarketplaceToolbar } from "@/components/features/marketplace/filters/toolbar";
 import { ProductGrid } from "@/components/features/marketplace/product-grid";
-import {
-  MOCK_PRODUCTS,
-  type MarketplaceCategory,
-  type MarketplaceProduct,
-} from "@/components/features/marketplace/data";
+import type { MarketplaceCategory, MarketplaceProduct } from "@/components/features/marketplace/data";
 import { filterProducts, useMarketplaceStore } from "@/components/features/marketplace/store";
 
 const categoryOrder: MarketplaceCategory[] = ["Obat", "Vitamin", "Perangkat", "Layanan", "Herbal"];
@@ -83,8 +79,8 @@ function dedupeProducts(products: MarketplaceProduct[]): MarketplaceProduct[] {
 }
 
 export default function MarketplacePage() {
-  const [products, setProducts] = useState<MarketplaceProduct[]>(MOCK_PRODUCTS);
-  const [dataSource, setDataSource] = useState<"fallback" | "rxnav">("fallback");
+  const [products, setProducts] = useState<MarketplaceProduct[]>([]);
+  const [dataSource, setDataSource] = useState<"fallback" | "supabase">("supabase");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -125,7 +121,7 @@ export default function MarketplacePage() {
           throw new Error(`Marketplace products API returned ${response.status}`);
         }
         const payload = (await response.json()) as {
-          source: "fallback" | "rxnav";
+          source: "fallback" | "supabase";
           products: MarketplaceProduct[];
         };
 
@@ -144,7 +140,7 @@ export default function MarketplacePage() {
           return;
         }
         console.error("[marketplace] failed to hydrate products", error);
-        setErrorMessage("Gagal memuat data obat live, menampilkan katalog contoh Medlink.");
+        setErrorMessage("Gagal memuat data Supabase, menampilkan katalog fallback Medlink.");
         setDataSource("fallback");
       } finally {
         if (isActive) {
@@ -196,11 +192,6 @@ export default function MarketplacePage() {
     return Array.from(tagSet).slice(0, 12);
   }, [products]);
 
-  const liveProductCount = useMemo(
-    () => products.filter((product) => product.id.startsWith("rx-")).length,
-    [products],
-  );
-
   const [primaryAllergy, ...restAllergies] = patientSnapshot.allergies;
   const allergySummary =
     patientSnapshot.allergies.length > 0
@@ -214,7 +205,7 @@ export default function MarketplacePage() {
         (patientSnapshot.medications.length > 2 ? ` +${patientSnapshot.medications.length - 2}` : "")
       : "Belum ada obat aktif";
 
-  const isLive = dataSource === "rxnav";
+  const isSupabase = dataSource === "supabase";
 
   return (
     <PageShell
@@ -244,13 +235,13 @@ export default function MarketplacePage() {
                   {isLoading ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                   ) : (
-                    <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+                    <Database className="h-3.5 w-3.5" aria-hidden="true" />
                   )}
-                  {isLive ? "Terhubung ke RxNav (NIH)" : "Menampilkan katalog contoh offline"}
+                  {isSupabase ? "Terhubung ke Supabase" : "Menampilkan katalog fallback offline"}
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-muted-foreground">
                   <Activity className="h-3.5 w-3.5" aria-hidden="true" />
-                  {liveProductCount} obat live / {products.length} produk total
+                  {products.length} produk tersedia
                 </span>
               </div>
               {errorMessage ? (

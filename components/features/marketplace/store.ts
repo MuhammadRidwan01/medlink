@@ -3,7 +3,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import {
-  MOCK_PRODUCTS,
   PATIENT_CONTEXT,
   type MarketplaceProduct,
   type MarketplaceCategory,
@@ -58,7 +57,7 @@ export const useMarketplaceStore = create<MarketplaceState>()(
     categories: [],
     tags: [],
     visibleCount: PAGE_SIZE,
-    totalProducts: MOCK_PRODUCTS.length,
+    totalProducts: PAGE_SIZE,
     patientSnapshot: FALLBACK_SNAPSHOT,
     setSearch: (value) => set(() => ({ search: value })),
     setDebouncedSearch: (value) => set(() => ({ debouncedSearch: value, visibleCount: PAGE_SIZE })),
@@ -300,4 +299,4 @@ export const useMarketplaceSafety = create<SafetyState>()(
   })),
 );
 
-export { MOCK_PRODUCTS };
+export { MOCK_PRODUCTS } from "./data";
