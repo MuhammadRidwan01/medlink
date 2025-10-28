@@ -18,6 +18,7 @@ const decodeJwtPayload = (token?: string) => {
 };
 
 const resolveRole = (payload: Record<string, unknown> | null): "doctor" | "patient" => {
+  // Only promote to doctor if explicit metadata exists (set by activation API)
   const metaRole =
     (payload?.user_metadata as Record<string, unknown> | undefined)?.role ??
     (payload?.app_metadata as Record<string, unknown> | undefined)?.role;
@@ -25,15 +26,7 @@ const resolveRole = (payload: Record<string, unknown> | null): "doctor" | "patie
     return "doctor";
   }
 
-  const email =
-    (payload?.email as string | undefined) ??
-    ((payload?.user_metadata as Record<string, unknown> | undefined)?.email as
-      | string
-      | undefined);
-  if (email && email.toLowerCase().includes("doctor")) {
-    return "doctor";
-  }
-
+  // Default to patient for all new users (no email heuristic)
   return "patient";
 };
 

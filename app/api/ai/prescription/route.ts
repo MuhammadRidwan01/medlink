@@ -35,11 +35,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload", detail: String((e as Error).message) }, { status: 400 });
   }
 
-  const system = `You are MedLink AI, assisting doctors to propose prescription drafts in Bahasa Indonesia.
-Rules:
-- Provide safe, common first-line options only with dosage/frequency/duration suitable for adults unless context says otherwise.
-- Respect allergies and active medications to avoid interactions.
-- Output only JSON in the specified schema, no extra text.`;
+  const system = `You are MedLink AI, assisting to create detailed medication schedules in Bahasa Indonesia.
+
+CRITICAL RULES:
+- Provide safe, evidence-based medication recommendations
+- Clearly distinguish between OTC (over-the-counter) and Rx (prescription) medications
+- Create DETAILED medication schedule with specific times
+- Respect allergies and active medications to avoid interactions
+- Consider patient age, weight, and condition severity
+- Provide clear instructions for optimal therapeutic effect
+- Output only JSON in the specified schema, no extra text
+
+MEDICATION TYPES:
+- **OTC (Over-the-Counter)**: Obat bebas yang tidak memerlukan resep (Paracetamol, Ibuprofen, Antasida, dll)
+- **Rx (Prescription)**: Obat yang memerlukan resep dokter (Antibiotik, Obat keras, dll)
+
+MEDICATION SCHEDULE FORMAT:
+- Specify exact times (e.g., "08:00, 14:00, 20:00" for 3x sehari)
+- Include timing relative to meals if important
+- Provide duration in days with clear end date
+- Add important warnings and precautions
+- Mark each medication as "otc" or "prescription"`;
 
   const contextParts: string[] = [];
   if (payload.provisionalDiagnosis) contextParts.push(`Diagnosis: ${payload.provisionalDiagnosis}`);
@@ -49,7 +65,38 @@ Rules:
   if (payload.patient?.allergies?.length) contextParts.push(`Allergies: ${payload.patient.allergies.map(a => a.substance).join(", ")}`);
   if (payload.patient?.meds?.length) contextParts.push(`Active meds: ${payload.patient.meds.filter(m=>m.status!=="stopped").map(m => m.name).join(", ")}`);
 
-  const userMsg = `Buat draf resep (1-3 item) beserta dosis, frekuensi, durasi, dan catatan singkat jika perlu berdasarkan konteks berikut:\n${contextParts.join("\n")}\n\nSkema keluaran (JSON saja): { "suggestions": [ { "name": string, "code": string, "strength": string, "dose": string, "frequency": string, "duration": string, "notes"?: string, "rationale"?: string } ], "warnings"?: string[] }`;
+  const userMsg = `Berdasarkan informasi triage yang LENGKAP, buat draf resep obat (1-4 obat) dengan jadwal minum yang DETAIL dan SPESIFIK.
+
+Konteks:
+${contextParts.join("\n")}
+
+PENTING:
+- Pisahkan obat OTC (bebas) dan obat resep (Rx)
+- Berikan jadwal waktu minum yang spesifik (jam berapa saja)
+- Jelaskan cara konsumsi (sebelum/sesudah makan, dengan air, dll)
+- Berikan durasi yang tepat berdasarkan kondisi
+- Tambahkan catatan penting (efek samping, kontraindikasi, dll)
+- Berikan rationale mengapa obat ini dipilih
+- Tandai setiap obat dengan "type": "otc" atau "prescription"
+
+Skema keluaran (JSON saja): 
+{ 
+  "suggestions": [ 
+    { 
+      "name": string (nama obat),
+      "code": string (kode/slug obat),
+      "type": "otc" | "prescription" (WAJIB: tipe obat),
+      "strength": string (kekuatan obat, e.g., "500mg"),
+      "dose": string (dosis per konsumsi, e.g., "1 tablet"),
+      "frequency": string (frekuensi DETAIL dengan jam, e.g., "3x sehari (08:00, 14:00, 20:00)"),
+      "duration": string (durasi lengkap, e.g., "3 hari atau hingga demam turun"),
+      "notes": string (instruksi lengkap: waktu konsumsi, cara minum, hal yang harus dihindari),
+      "rationale": string (alasan pemilihan obat berdasarkan gejala)
+    } 
+  ], 
+  "warnings"?: string[] (peringatan penting jika ada),
+  "requiresDoctorApproval": boolean (true jika ada obat resep)
+}`;
 
   const groqBody = JSON.stringify({
     model: DEFAULT_MODEL,

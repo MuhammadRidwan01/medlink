@@ -17,6 +17,7 @@ export type ChatMessageProps = {
   riskLevel?: RiskLevel;
   redFlag?: string;
   isTyping?: boolean;
+  metadata?: Record<string, any>;
 };
 
 const roleConfig: Record<

@@ -140,3 +140,45 @@ function isRecommendation(value: unknown): value is TriageRecommendation {
   }
   return true;
 }
+
+/**
+ * Check if there are significant changes between two summaries
+ * Only update UI if there's meaningful new information
+ */
+export function hasSignificantChange(prev: TriageSummary, next: TriageSummary): boolean {
+  // Always update if risk level changes
+  if (prev.riskLevel !== next.riskLevel) {
+    return true;
+  }
+
+  // Update if severity changes
+  if (prev.severity !== next.severity) {
+    return true;
+  }
+
+  // Update if new symptoms are added (not just rephrased)
+  const prevSymptoms = new Set(prev.symptoms.map(s => s.toLowerCase().trim()));
+  const nextSymptoms = new Set(next.symptoms.map(s => s.toLowerCase().trim()));
+  const hasNewSymptoms = Array.from(nextSymptoms).some(s => !prevSymptoms.has(s));
+  if (hasNewSymptoms && !next.symptoms.includes("Belum ada data")) {
+    return true;
+  }
+
+  // Update if duration changes significantly
+  if (prev.duration !== next.duration && next.duration !== "Belum diketahui") {
+    return true;
+  }
+
+  // Update if red flags are added
+  if (next.redFlags.length > prev.redFlags.length) {
+    return true;
+  }
+
+  // Update if recommendation type changes
+  if (prev.recommendation?.type !== next.recommendation?.type) {
+    return true;
+  }
+
+  // No significant change
+  return false;
+}
