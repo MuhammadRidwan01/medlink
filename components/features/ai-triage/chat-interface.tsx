@@ -81,6 +81,7 @@ const quickReplyPresets: QuickReply[] = [
 
 export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const [sessionId, setSessionId] = useState<string | null>(initialSession?.id ?? null);
+  const [sessionStatus, setSessionStatus] = useState<"active" | "completed">("active");
   const [messages, setMessages] = useState<ChatMessageProps[]>(() => {
     if (initialSession?.messages?.length) {
       return initialSession.messages;
@@ -109,12 +110,16 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const [isHydrated, setIsHydrated] = useState(false);
   const [showJumpToNew, setShowJumpToNew] = useState(false);
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
+  const [sessionBusy, setSessionBusy] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [showFinalPanel, setShowFinalPanel] = useState(false);
 
   const quickReplies = useMemo(() => quickReplyPresets, []);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const sendButtonRef = useRef<HTMLButtonElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const lastMessageIdRef = useRef<string | null>(
     initialSession?.messages?.[initialSession.messages.length - 1]?.id ?? messages.at(-1)?.id ?? null,
   );
@@ -122,6 +127,19 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const [isAtBottom, setIsAtBottom] = useState(true);
 
   useEffect(() => setIsHydrated(true), []);
+
+  // Warn before leaving if session still active
+  useEffect(() => {
+    if (!isHydrated) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      if (sessionStatus === "active" && (messages.length > 1 || isStreaming)) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isHydrated, sessionStatus, messages.length, isStreaming]);
 
   const profile = useProfileStore((state) => state.profile);
   const allergies = useProfileStore((state) => state.allergies);
@@ -166,6 +184,14 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
 
   useEffect(() => {
     if (!isHydrated) return;
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [inputValue, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
     const viewport = viewportRef.current;
     const sentinel = bottomRef.current;
     if (!viewport || !sentinel) return;
@@ -204,6 +230,87 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
       setLiveAnnouncement("Pesan baru tersedia.");
     }
   }, [messages, isAtBottom, scrollToBottom, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (initialSession?.id) return;
+    if (sessionId) return;
+    setRestoring(true);
+    fetch("/api/triage/session", { method: "GET" })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          session: { id: string; status: "active" | "completed"; summary: TriageSummary } | null;
+          messages: Array<{
+            id: number | string;
+            role: string;
+            content: string;
+            created_at?: string;
+            metadata?: Record<string, any>;
+          }>;
+        };
+        if (!data.session) return;
+        setSessionId(data.session.id);
+        setSessionStatus(data.session.status ?? "active");
+        setShowFinalPanel(data.session.status === "completed");
+        setSummary(data.session.summary ?? createEmptyTriageSummary());
+        const mapped: ChatMessageProps[] = (data.messages || []).map((m) => ({
+          id: `db-${m.id}`,
+          role: m.role === "user" ? "user" : m.role === "doctor" ? "doctor" : "ai",
+          content: m.content,
+          timestamp: formatTriageTimestamp(m.created_at ?? new Date()),
+          riskLevel:
+            typeof m.metadata?.risk_level === "string"
+              ? (m.metadata.risk_level as ChatMessageProps["riskLevel"])
+              : undefined,
+          redFlag: Array.isArray(m.metadata?.red_flags) ? (m.metadata.red_flags as string[])[0] : undefined,
+        }));
+        setMessages((prev) => (prev.length > 1 ? prev : mapped.length ? mapped : prev));
+      })
+      .finally(() => setRestoring(false));
+  }, [isHydrated, initialSession, sessionId]);
+
+  const handleResetSession = useCallback(async () => {
+    if (sessionBusy) return;
+    setSessionBusy(true);
+    try {
+      const res = await fetch("/api/triage/session/reset", { method: "POST" });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        session: { id: string; summary: TriageSummary } | null;
+      };
+      if (data.session) {
+        setSessionId(data.session.id);
+        setSummary(data.session.summary ?? createEmptyTriageSummary());
+        setMessages([
+          {
+            id: "msg-ai-welcome",
+            role: "ai",
+            content:
+              "Halo, saya MedLink AI. Saya akan menanyakan beberapa pertanyaan untuk memahami kondisi Anda. Dokter akan meninjau hasil akhirnya.",
+            timestamp: formatTriageTimestamp(new Date()),
+          },
+        ]);
+        scrollToBottom("auto");
+      }
+    } finally {
+      setSessionBusy(false);
+    }
+  }, [sessionBusy, scrollToBottom]);
+
+  const handleCompleteSession = useCallback(async () => {
+    if (sessionBusy) return;
+    setSessionBusy(true);
+    try {
+      const res = await fetch("/api/triage/session/complete", { method: "POST" });
+      if (!res.ok) return;
+      setBanner((prev) => ({ ...prev, visible: false }));
+      setSessionStatus("completed");
+      setShowFinalPanel(true);
+    } finally {
+      setSessionBusy(false);
+    }
+  }, [sessionBusy, setBanner]);
 
   const addMessage = useCallback((message: ChatMessageProps) => {
     setMessages((prev) => [...prev, message]);
@@ -308,6 +415,24 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="relative flex min-h-[70vh] flex-col rounded-card bg-card shadow-md">
         <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex items-center justify-end gap-2 border-b border-border/70 bg-background/70 px-4 py-3 md:px-6">
+            <button
+              type="button"
+              className="tap-target rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm disabled:opacity-60"
+              onClick={handleResetSession}
+              disabled={sessionBusy || isStreaming || restoring}
+            >
+              Mulai sesi baru
+            </button>
+            <button
+              type="button"
+              className="tap-target rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-white shadow-sm disabled:opacity-60"
+              onClick={handleCompleteSession}
+              disabled={sessionBusy || isStreaming || !sessionId}
+            >
+              Selesaikan sesi
+            </button>
+          </div>
           <div
             ref={viewportRef}
             className="relative flex-1 space-y-4 overflow-y-auto px-4 pb-6 pt-4 md:px-6"
@@ -406,14 +531,15 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
                 placeholder="Ceritakan gejala yang Anda rasakan…"
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
+                ref={inputRef}
                 rows={1}
-                disabled={isStreaming}
+                disabled={isStreaming || sessionStatus === "completed"}
                 className="tap-target h-14 flex-1 resize-none rounded-card border border-input bg-background px-4 py-3 text-body shadow-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
               />
               <button
                 ref={sendButtonRef}
                 type="submit"
-                disabled={isStreaming || !inputValue.trim()}
+                disabled={isStreaming || sessionStatus === "completed" || !inputValue.trim()}
                 className="interactive tap-target inline-flex h-14 items-center justify-center rounded-full bg-primary-gradient px-6 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
                 aria-label="Kirim jawaban"
               >
@@ -424,7 +550,21 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
         </div>
       </div>
 
-      <SymptomSummary summary={summary} loading={!isHydrated} className="lg:pl-0" />
+      <div className="space-y-4 lg:pl-0">
+        <SymptomSummary summary={summary} loading={!isHydrated} className="" />
+        {showFinalPanel ? (
+          <div className="card-surface space-y-3 rounded-card border border-border/60 bg-card p-4 shadow-sm">
+            <p className="text-small font-semibold text-foreground">Triage selesai</p>
+            <p className="text-small text-muted-foreground">
+              Hasil menunjukkan risiko {summary.riskLevel}. {summary.recommendation?.type === "otc" ? "Anda dapat melakukan perawatan mandiri sementara (OTC)." : "Silakan pertimbangkan konsultasi dengan dokter."}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a href="/patient/dashboard" className="tap-target rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">Kembali ke Dashboard</a>
+              <button type="button" onClick={handleResetSession} className="tap-target rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-white shadow-sm">Mulai sesi baru</button>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
