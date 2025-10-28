@@ -32,14 +32,14 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "w-72 shrink-0 flex-col gap-4 border-r border-border bg-background px-4 py-6",
+        "w-72 shrink-0 border-r border-border bg-background px-4 py-6",
         mobileOpen
-          ? "fixed inset-y-0 left-0 z-50 flex shadow-xl md:relative md:flex"
-          : "hidden md:flex",
+          ? "fixed inset-y-0 left-0 z-50 flex flex-col overflow-y-auto shadow-xl md:relative md:flex"
+          : "hidden flex-col md:sticky md:top-24 md:flex md:max-h-[calc(100vh-6rem)] md:overflow-hidden",
         className,
       )}
     >
-      <nav className="space-y-1">
+      <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
         {items.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -71,7 +71,7 @@ export function Sidebar({
           );
         })}
       </nav>
-      {footer ? <div className="mt-auto">{footer}</div> : null}
+      {footer ? <div className="mt-4 shrink-0 border-t border-border/60 pt-4">{footer}</div> : null}
     </aside>
   );
 }

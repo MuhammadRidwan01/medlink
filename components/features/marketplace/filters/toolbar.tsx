@@ -129,7 +129,7 @@ export function MarketplaceToolbar({
               className="tap-target w-full rounded-input border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Harga minimum"
             />
-            <span className="text-xs text-muted-foreground">—</span>
+            <span className="text-xs text-muted-foreground">s.d.</span>
             <input
               type="number"
               min={minPrice}
@@ -195,3 +195,4 @@ export function MarketplaceToolbar({
     </section>
   );
 }
+

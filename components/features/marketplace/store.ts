@@ -3,7 +3,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import {
-  MOCK_PRODUCTS,
   PATIENT_CONTEXT,
   type MarketplaceProduct,
   type MarketplaceCategory,
@@ -25,6 +24,7 @@ type MarketplaceState = {
   categories: MarketplaceCategory[];
   tags: string[];
   visibleCount: number;
+  totalProducts: number;
   patientSnapshot: MarketplaceSafetySnapshot;
   setSearch: (value: string) => void;
   setDebouncedSearch: (value: string) => void;
@@ -36,6 +36,7 @@ type MarketplaceState = {
   resetFilters: () => void;
   loadMore: () => void;
   setPatientSnapshot: (snapshot: MarketplaceSafetySnapshot) => void;
+  setTotalProducts: (count: number) => void;
 };
 
 const DEFAULT_PRICE_RANGE: [number, number] = [0, 600000];
@@ -56,6 +57,7 @@ export const useMarketplaceStore = create<MarketplaceState>()(
     categories: [],
     tags: [],
     visibleCount: PAGE_SIZE,
+    totalProducts: PAGE_SIZE,
     patientSnapshot: FALLBACK_SNAPSHOT,
     setSearch: (value) => set(() => ({ search: value })),
     setDebouncedSearch: (value) => set(() => ({ debouncedSearch: value, visibleCount: PAGE_SIZE })),
@@ -92,9 +94,14 @@ export const useMarketplaceStore = create<MarketplaceState>()(
       })),
     loadMore: () =>
       set((state) => ({
-        visibleCount: Math.min(state.visibleCount + PAGE_SIZE, MOCK_PRODUCTS.length),
+        visibleCount: Math.min(state.visibleCount + PAGE_SIZE, state.totalProducts),
       })),
     setPatientSnapshot: (snapshot) => set(() => ({ patientSnapshot: snapshot })),
+    setTotalProducts: (count) =>
+      set((state) => ({
+        totalProducts: count,
+        visibleCount: Math.min(state.visibleCount, Math.max(count, PAGE_SIZE)),
+      })),
   })),
 );
 
@@ -292,4 +299,4 @@ export const useMarketplaceSafety = create<SafetyState>()(
   })),
 );
 
-export { MOCK_PRODUCTS };
+export { MOCK_PRODUCTS } from "./data";
