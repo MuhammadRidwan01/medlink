@@ -54,27 +54,65 @@ export function useSession(): SessionState {
 
       const session = data.session ?? null;
       const user = session?.user ?? null;
+      let role: "patient" | "doctor" = inferRoleFromEmail(user?.email ?? null);
+      try {
+        if (typeof document !== "undefined") {
+          const match = document.cookie.match(/(?:^|; )role=([^;]+)/);
+          if (match && decodeURIComponent(match[1]) === "doctor") role = "doctor";
+        }
+      } catch {}
+      const metaRole = (user?.user_metadata as any)?.role ?? (user?.app_metadata as any)?.role;
+      if (metaRole === "doctor") role = "doctor";
+      // Set immediate state first to avoid long skeletons
       setState({
         status: session ? "authenticated" : "unauthenticated",
         session,
         user,
-        role: inferRoleFromEmail(user?.email ?? null),
+        role,
       });
+      // Authoritative DB check (non-blocking): upgrade role if needed
+      if (session) {
+        try {
+          const { data: isDoc } = await supabase.rpc("is_doctor");
+          if (isDoc === true) {
+            setState((prev) => ({ ...prev, role: "doctor" }));
+          }
+        } catch {}
+      }
     };
 
     void resolve();
 
     const {
       data: authListener,
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
       const user = session?.user ?? null;
+      let role: "patient" | "doctor" = inferRoleFromEmail(user?.email ?? null);
+      try {
+        if (typeof document !== "undefined") {
+          const match = document.cookie.match(/(?:^|; )role=([^;]+)/);
+          if (match && decodeURIComponent(match[1]) === "doctor") role = "doctor";
+        }
+      } catch {}
+      const metaRole = (user?.user_metadata as any)?.role ?? (user?.app_metadata as any)?.role;
+      if (metaRole === "doctor") role = "doctor";
+      // Set immediate state
       setState({
         status: session ? "authenticated" : "unauthenticated",
         session: session ?? null,
         user,
-        role: inferRoleFromEmail(user?.email ?? null),
+        role,
       });
+      // Upgrade role after RPC
+      if (session) {
+        try {
+          const { data: isDoc } = await supabase.rpc("is_doctor");
+          if (isDoc === true) {
+            setState((prev) => ({ ...prev, role: "doctor" }));
+          }
+        } catch {}
+      }
     });
 
     return () => {

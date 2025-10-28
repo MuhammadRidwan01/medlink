@@ -52,6 +52,22 @@ export const MOCK_PRODUCTS: MarketplaceProduct[] = [
   },
   {
     id: "prod-2",
+    slug: "dekongestan-nasal-spray",
+    name: "Dekongestan Nasal Spray",
+    shortDescription: "Meredakan hidung tersumbat dan pilek.",
+    longDescription:
+      "Dekongestan spray nasal yang efektif meredakan hidung tersumbat akibat flu, pilek, atau sinusitis. Bekerja cepat dalam 5-10 menit.",
+    price: 25000,
+    imageUrl: "https://images.unsplash.com/photo-1580281658629-1796132cc0c3?auto=format&fit=crop&w=600&q=80",
+    categories: ["Obat"],
+    tags: ["dekongestan", "pilek", "OTC", "hidung"],
+    rating: 4.5,
+    ratingCount: 134,
+    inventoryStatus: "in-stock",
+    badges: ["Fast Acting"],
+  },
+  {
+    id: "prod-3",
     slug: "ibuprofen-400mg-bottle",
     name: "Ibuprofen 400mg Botol",
     shortDescription: "Anti-inflamasi untuk nyeri sendi dan otot.",

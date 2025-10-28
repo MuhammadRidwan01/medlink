@@ -173,6 +173,7 @@ export async function POST(request: Request) {
     const reader = groqResponse.body!.getReader();
     let isClosed = false;
     let completed = false;
+    let buffer = ""; // accumulate partial lines
     
     // Define safeClose helper function
     const safeClose = () => {
@@ -190,7 +191,9 @@ export async function POST(request: Request) {
           break;
         }
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
+        buffer += chunk;
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || ""; // keep last incomplete line in buffer
 
         for (const line of lines) {
           const trimmed = line.trim();
@@ -216,8 +219,8 @@ export async function POST(request: Request) {
               accumulated += delta;
               controller.enqueue(encoder.encode(delta));
             }
-          } catch (error) {
-            console.warn("Failed to parse Groq SSE chunk:", error, data);
+          } catch {
+            // Silently skip malformed JSON chunks (partial SSE frames)
           }
         }
       }

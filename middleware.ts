@@ -50,10 +50,15 @@ export function middleware(request: NextRequest) {
   }
 
   if (hasSession && isAuthRoute) {
+    // Prefer explicit role cookie (set after activation) to avoid waiting for JWT refresh
+    const roleCookie = request.cookies.get("role")?.value;
+    if (roleCookie === "doctor") {
+      return NextResponse.redirect(new URL("/doctor/dashboard", request.url));
+    }
+
     const payload = decodeJwtPayload(request.cookies.get("sb-access-token")?.value);
     const role = resolveRole(payload);
-    const dashboardUrl =
-      role === "doctor" ? "/doctor/dashboard" : "/patient/dashboard";
+    const dashboardUrl = role === "doctor" ? "/doctor/dashboard" : "/patient/dashboard";
     return NextResponse.redirect(new URL(dashboardUrl, request.url));
   }
 

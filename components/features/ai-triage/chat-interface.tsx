@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, ArrowDown, Send, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Send, AlertTriangle, ArrowDown, X } from "lucide-react";
+import { useMarketplaceCart, MOCK_PRODUCTS } from "@/components/features/marketplace/store";
 import { cn } from "@/lib/utils";
 import { ChatMessage, type ChatMessageProps } from "./chat-message";
 import { QuickReplies, type QuickReply } from "./quick-replies";
@@ -113,6 +114,11 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const [sessionBusy, setSessionBusy] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [showFinalPanel, setShowFinalPanel] = useState(false);
+  const [otcBusy, setOtcBusy] = useState(false);
+  const [otcSuggestions, setOtcSuggestions] = useState<Array<{
+    name: string; code: string; strength: string; dose: string; frequency: string; duration: string; notes?: string; rationale?: string;
+  }>>([]);
+  const otcAutoFetchedRef = useRef(false);
 
   const quickReplies = useMemo(() => quickReplyPresets, []);
 
@@ -172,6 +178,55 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
     () => buildPatientContext({ profile, allergies, medications }),
     [profile, allergies, medications],
   );
+
+  // Auto-fetch OTC prescription when AI recommends OTC
+  useEffect(() => {
+    if (!isHydrated || otcBusy || isStreaming) return;
+    if (summary?.recommendation?.type !== "otc") {
+      otcAutoFetchedRef.current = false;
+      return;
+    }
+    if (otcAutoFetchedRef.current) return;
+    otcAutoFetchedRef.current = true;
+    setOtcBusy(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/ai/prescription", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            patient: {
+              profile: patientContext?.profile ? {
+                id: "self",
+                name: patientContext?.profile?.name ?? null,
+                age: patientContext?.profile?.age ?? null,
+                sex: patientContext?.profile?.sex ?? null,
+                bloodType: patientContext?.profile?.bloodType ?? null,
+              } : null,
+              allergies: (patientContext?.allergies || []).map((s) => ({ substance: s })),
+              meds: (patientContext?.medications || []).map((m) => ({ name: m.name, strength: m.strength ?? null, frequency: m.frequency ?? null, status: "active" })),
+            },
+            triageSummary: {
+              riskLevel: summary?.riskLevel,
+              symptoms: summary?.symptoms,
+              duration: summary?.duration,
+              redFlags: summary?.redFlags,
+            },
+            provisionalDiagnosis: undefined,
+          }),
+        });
+        if (!res.ok) throw new Error("Gagal membuat draf OTC AI");
+        const data = await res.json();
+        const items = Array.isArray(data?.suggestions) ? data.suggestions : [];
+        setOtcSuggestions(items);
+      } catch (e) {
+        console.error("Auto OTC fetch failed:", e);
+        setOtcSuggestions([]);
+      } finally {
+        setOtcBusy(false);
+      }
+    })();
+  }, [isHydrated, summary, patientContext, otcBusy, isStreaming]);
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -516,6 +571,13 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
 
           <div className="border-t border-border/70 bg-background/95 px-4 py-4 safe-area-bottom md:px-6">
             <QuickReplies options={quickReplies} onSelect={handleQuickReply} disabled={isStreaming} />
+            {/* Auto OTC loading indicator */}
+            {summary?.recommendation?.type === "otc" && otcBusy ? (
+              <div className="mt-3 flex items-center gap-2 rounded-card border border-primary/20 bg-primary/5 p-3 text-xs text-primary/90">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/30 border-t-primary"></div>
+                <span>AI sedang membuat draf resep OTC…</span>
+              </div>
+            ) : null}
             <form
               className="mt-4 flex items-end gap-3"
               onSubmit={(event) => {
@@ -546,6 +608,57 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
                 <Send className="h-5 w-5" />
               </button>
             </form>
+            {otcSuggestions.length ? (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mt-4 space-y-3 rounded-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-4 shadow-md"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20">
+                    <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-foreground">Rekomendasi Obat OTC</div>
+                    <div className="text-xs text-muted-foreground">AI telah menyiapkan saran perawatan mandiri</div>
+                  </div>
+                </div>
+                <ul className="space-y-2">
+                  {otcSuggestions.map((s, idx) => (
+                    <li key={idx} className="rounded-lg border border-border/60 bg-background p-3 shadow-sm">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-semibold text-foreground">{s.name} {s.strength}</div>
+                          <div className="mt-1 text-sm text-muted-foreground">
+                            <span className="font-medium">{s.dose}</span> • {s.frequency} • {s.duration}
+                          </div>
+                          {s.notes ? <div className="mt-2 rounded bg-muted/50 p-2 text-xs text-muted-foreground">💡 {s.notes}</div> : null}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <div className="rounded-lg bg-background/80 p-3">
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    ✅ <strong>Langkah selanjutnya:</strong> Pilih salah satu opsi di bawah untuk melanjutkan
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <AddToCartButton suggestions={otcSuggestions} />
+                    <a href="/doctor/consultation" className="tap-target rounded-button border border-primary/30 bg-background px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/5">Konsultasi Dokter</a>
+                    <button
+                      type="button"
+                      onClick={() => window.location.href = "/patient/dashboard"}
+                      className="tap-target rounded-button border border-border bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/50"
+                    >
+                      Kembali ke Dashboard
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -681,6 +794,7 @@ async function streamTriageResponse({
     } else {
       setBanner((prev) => ({ ...prev, visible: false }));
     }
+    // CTA untuk OTC ditampilkan di UI berdasarkan summary.recommendation.type === 'otc'
   } catch (error) {
     console.error("AI triage stream failed:", error);
     updateMessage(aiMessageId, {
@@ -710,6 +824,74 @@ function buildChatHistory(messages: ChatMessageProps[]): ApiChatMessage[] {
     });
   }
   return history.slice(-16);
+}
+
+function AddToCartButton({ suggestions }: { suggestions: Array<{ name: string; code: string }> }) {
+  const addItem = useMarketplaceCart((state) => state.addItem);
+  const toggle = useMarketplaceCart((state) => state.toggle);
+  const [adding, setAdding] = useState(false);
+
+  const handleAddToCart = () => {
+    setAdding(true);
+    let addedCount = 0;
+    const notFound: string[] = [];
+
+    for (const s of suggestions) {
+      // Fuzzy matching: try multiple strategies
+      const searchTerm = s.name.toLowerCase();
+      const product = MOCK_PRODUCTS.find((p) => {
+        const nameLower = p.name.toLowerCase();
+        const slugLower = p.slug.toLowerCase();
+        const tagsLower = p.tags.join(" ").toLowerCase();
+        
+        // Strategy 1: exact slug match
+        if (slugLower === s.code?.toLowerCase()) return true;
+        
+        // Strategy 2: slug contains search term
+        if (s.code && slugLower.includes(s.code.toLowerCase())) return true;
+        
+        // Strategy 3: name contains search term or vice versa
+        if (nameLower.includes(searchTerm) || searchTerm.includes(nameLower.split(" ")[0])) return true;
+        
+        // Strategy 4: tags match (e.g., "dekongestan", "paracetamol")
+        if (tagsLower.includes(searchTerm)) return true;
+        
+        // Strategy 5: first word match
+        const firstWord = searchTerm.split(" ")[0];
+        if (firstWord.length > 3 && (nameLower.includes(firstWord) || tagsLower.includes(firstWord))) return true;
+        
+        return false;
+      });
+
+      if (product) {
+        addItem(product);
+        addedCount++;
+      } else {
+        notFound.push(s.name);
+      }
+    }
+
+    setTimeout(() => {
+      setAdding(false);
+      if (addedCount > 0) {
+        toggle(true); // Open cart sheet
+      }
+      if (notFound.length > 0) {
+        console.warn("Produk tidak ditemukan:", notFound);
+      }
+    }, 300);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleAddToCart}
+      disabled={adding}
+      className="tap-target rounded-button bg-primary-gradient px-3 py-1.5 font-semibold text-white shadow-sm disabled:opacity-60"
+    >
+      {adding ? "Menambahkan..." : "Tambah ke Keranjang"}
+    </button>
+  );
 }
 
 function buildPatientContext({
