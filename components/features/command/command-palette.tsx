@@ -40,7 +40,8 @@ export function GlobalCommandPalette() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().includes("MAC");
-      if ((isMac && e.metaKey && e.key.toLowerCase() === "k") || (!isMac && e.ctrlKey && e.key.toLowerCase() === "k") || e.key.toLowerCase() === "k") {
+      // Open only with Cmd+K (Mac) or Ctrl+K (others); do not open on plain 'k'
+      if ((isMac && e.metaKey && e.key.toLowerCase() === "k") || (!isMac && e.ctrlKey && e.key.toLowerCase() === "k")) {
         e.preventDefault();
         previouslyFocused.current = document.activeElement as HTMLElement;
         setOpen(true);
@@ -88,7 +89,15 @@ export function GlobalCommandPalette() {
         <>
           <motion.div className="fixed inset-0 z-[60] bg-background/70 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={() => setOpen(false)} />
           <motion.div role="dialog" aria-modal="true" aria-label="Command palette" className="fixed inset-0 z-[61] grid place-items-start overflow-y-auto pt-[10vh]" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.18 }}>
-            <div className="mx-auto w-full max-w-2xl space-y-3 rounded-card border border-border/60 bg-card p-3 shadow-xl">
+            <div className="relative mx-auto w-full max-w-2xl space-y-3 rounded-card border border-border/60 bg-card p-4 pt-10 pr-10 shadow-xl">
+              <button
+                type="button"
+                aria-label="Close"
+                className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/40 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                onClick={() => setOpen(false)}
+              >
+                <span aria-hidden className="text-lg leading-none">&times;</span>
+              </button>
               <span ref={liveRef} tabIndex={-1} className="sr-only" aria-live="polite">Command palette opened</span>
               <CommandInput value={query} onChange={(v) => { setQuery(v); setActive(0); }} indices={[]} />
               {query ? (
