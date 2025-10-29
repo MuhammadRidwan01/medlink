@@ -6,7 +6,6 @@ import { checkoutAction } from "@/lib/commerce/actions";
 import {
   BASE_DISCOUNT,
   DELIVERY_OPTIONS,
-  MOCK_ADDRESSES,
   MOCK_CHECKOUT_ITEMS,
   type Address,
   type CheckoutItem,
@@ -76,7 +75,8 @@ export const usePaymentStore = create<PaymentStore>()(
     persist(
       (set, get) => ({
         checkoutItems: MOCK_CHECKOUT_ITEMS,
-        addresses: MOCK_ADDRESSES,
+        // No default mock addresses; use profile or user-added ones in checkout page
+        addresses: [],
         deliveryOptions: DELIVERY_OPTIONS,
         activeOrderId: undefined,
         orders: {},

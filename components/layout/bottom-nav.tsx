@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { SidebarItem } from "./sidebar";
+import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 
 type BottomNavProps = {
   items: SidebarItem[];
@@ -51,6 +52,9 @@ export function BottomNav({ items, className }: BottomNavProps) {
           </Link>
         );
       })}
+      <div className="ml-1">
+        <ThemeToggle className="px-2 py-2" />
+      </div>
     </motion.nav>
   );
 }

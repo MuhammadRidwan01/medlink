@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, AlertTriangle, ArrowDown, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useMarketplaceCart } from "@/components/features/marketplace/store";
+import { createClient } from "@/lib/supabase/client";
 import { PrescriptionBubble } from "./prescription-bubble";
 import { cn } from "@/lib/utils";
 import { ChatMessage, type ChatMessageProps } from "./chat-message";
@@ -77,11 +78,87 @@ type ChatInterfaceProps = {
 };
 
 const quickReplyPresets: QuickReply[] = [
-  { id: "qr-1", label: "Saya demam", variant: "primary" },
-  { id: "qr-2", label: "Ada nyeri dada", variant: "outline" },
-  { id: "qr-3", label: "Sesak napas", variant: "primary" },
-  { id: "qr-4", label: "Sakit kepala berat", variant: "quiet" },
+  {
+    id: "qr-1",
+    label: "Demam & menggigil",
+    description: "Sampaikan suhu tubuh dan durasinya",
+    variant: "primary",
+    icon: Thermometer,
+    hotkey: "1",
+  },
+  {
+    id: "qr-2",
+    label: "Nyeri dada",
+    description: "Rasa sesak atau tekanan di dada",
+    variant: "outline",
+    icon: HeartPulse,
+    hotkey: "2",
+  },
+  {
+    id: "qr-3",
+    label: "Sulit bernapas",
+    description: "Nafas pendek atau berbunyi",
+    variant: "primary",
+    icon: Wind,
+    hotkey: "3",
+  },
+  {
+    id: "qr-4",
+    label: "Sakit kepala hebat",
+    description: "Rasa berdenyut atau disertai mual",
+    variant: "quiet",
+    icon: Brain,
+    hotkey: "4",
+  },
 ];
+
+type RiskTheme = {
+  label: string;
+  description: string;
+  gradient: string;
+  accentDot: string;
+  icon: LucideIcon;
+  badge: string;
+};
+
+const riskThemes: Record<RiskLevel, RiskTheme> = {
+  low: {
+    label: "Risiko Rendah",
+    description: "Tetap pantau gejala dan lanjutkan anjuran AI.",
+    gradient: "from-emerald-500 via-primary to-primary-dark",
+    accentDot: "bg-emerald-300",
+    icon: ShieldCheck,
+    badge: "bg-white/15 text-white",
+  },
+  moderate: {
+    label: "Risiko Moderate",
+    description: "AI menyarankan pemantauan lebih lanjut dalam beberapa jam.",
+    gradient: "from-amber-500 via-orange-500 to-primary-dark",
+    accentDot: "bg-amber-300",
+    icon: CircleAlert,
+    badge: "bg-white/15 text-white",
+  },
+  high: {
+    label: "Risiko Tinggi",
+    description: "Segera hubungi dokter. AI melihat indikasi serius.",
+    gradient: "from-rose-500 via-orange-500 to-primary-dark",
+    accentDot: "bg-rose-300",
+    icon: Flame,
+    badge: "bg-white/15 text-white",
+  },
+  emergency: {
+    label: "Darurat",
+    description: "Hubungi layanan darurat sekarang juga.",
+    gradient: "from-red-500 via-red-600 to-rose-700",
+    accentDot: "bg-red-200",
+    icon: BellRing,
+    badge: "bg-white text-danger",
+  },
+};
+
+type TimelineEntry =
+  | { type: "divider"; id: string; label: string; highlight: boolean }
+  | { type: "message"; message: ChatMessageProps };
 
 export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const [sessionId, setSessionId] = useState<string | null>(initialSession?.id ?? null);
@@ -541,6 +618,28 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
     [handleSendMessage],
   );
 
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (isStreaming || sessionStatus === "completed") {
+        return;
+      }
+      if (event.target && event.target instanceof HTMLElement) {
+        const tag = event.target.tagName.toLowerCase();
+        if (tag === "textarea" || tag === "input" || event.target.isContentEditable) {
+          return;
+        }
+      }
+      const digit = Number.parseInt(event.key, 10);
+      if (!Number.isNaN(digit) && digit >= 1 && digit <= quickReplies.length) {
+        event.preventDefault();
+        const option = quickReplies[digit - 1];
+        handleQuickReply(option);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleQuickReply, isStreaming, quickReplies, sessionStatus]);
+
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const viewport = event.currentTarget;
     const distanceFromBottom =
@@ -557,29 +656,40 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
     return "border border-warning/40 bg-warning/10 text-warning";
   }, [banner.severity]);
 
+  const riskTheme = useMemo(() => riskThemes[summary.riskLevel ?? "low"], [summary.riskLevel]);
+  const summaryUpdatedLabel = useMemo(() => formatSummaryUpdated(summary.updatedAt), [summary.updatedAt]);
+
+  const timelineEntries = useMemo(() => {
+    const entries: TimelineEntry[] = [];
+    let lastLabel: string | null = null;
+    for (const message of messages) {
+      const meta = getTimelineMeta(message.timestamp);
+      if (meta && meta.label !== lastLabel) {
+        entries.push({
+          type: "divider",
+          id: `divider-${message.id}-${meta.label}`,
+          label: meta.label,
+          highlight: meta.isToday,
+        });
+        lastLabel = meta.label;
+      }
+      entries.push({ type: "message", message });
+    }
+    return entries;
+  }, [messages]);
+
 return (
   <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
     <div className="relative flex min-h-[70vh] flex-col rounded-card bg-card shadow-md">
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border/70 bg-background/70 px-4 py-3 md:px-6">
-          <div className="flex items-center gap-2">
-            <div className={cn(
-              "h-2 w-2 rounded-full",
-              sessionStatus === "completed" ? "bg-muted-foreground" : "bg-primary animate-pulse"
-            )}></div>
-            <span className="text-xs font-medium text-muted-foreground">
-              {sessionStatus === "completed" ? "Sesi selesai" : "Triage aktif"}
-            </span>
-          </div>
-          <button
-            type="button"
-            className="tap-target rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm disabled:opacity-60"
-            onClick={handleResetSession}
-            disabled={sessionBusy || isStreaming || restoring}
-          >
-            Mulai sesi baru
-          </button>
-        </div>
+        <SessionHeader
+          status={sessionStatus}
+          onReset={handleResetSession}
+          disabled={sessionBusy || isStreaming || restoring}
+          updatedLabel={summaryUpdatedLabel}
+          summary={summary}
+          theme={riskTheme}
+        />
         <div
           ref={viewportRef}
           className="relative flex-1 space-y-4 overflow-y-auto px-4 pb-6 pt-4 md:px-6"
@@ -629,8 +739,11 @@ return (
               ) : null}
             </AnimatePresence>
 
-            {messages.map((message) => {
-              // Render OTC bubble if message has OTC metadata
+            {timelineEntries.map((entry) => {
+              if (entry.type === "divider") {
+                return <TimelineDivider key={entry.id} label={entry.label} highlight={entry.highlight} />;
+              }
+              const message = entry.message;
               if (message.metadata?.type === "otc" && message.metadata?.suggestions) {
                 return (
                   <div key={message.id} className="flex justify-start">
@@ -638,7 +751,6 @@ return (
                   </div>
                 );
               }
-              // Render appointment bubble if message has appointment metadata
               if (message.metadata?.type === "appointment") {
                 return (
                   <div key={message.id} className="flex justify-start">
@@ -677,7 +789,7 @@ return (
             </AnimatePresence>
           </div>
 
-          <div className="border-t border-border/70 bg-background/95 px-4 py-4 safe-area-bottom md:px-6">
+          <div className="border-t border-border/60 bg-card/95 px-4 py-4 shadow-[0_6px_30px_-12px_rgba(15,23,42,0.35)] backdrop-blur safe-area-bottom md:px-6">
             <QuickReplies options={quickReplies} onSelect={handleQuickReply} disabled={isStreaming} />
             <form
               className="mt-4 flex items-end gap-3"
@@ -691,19 +803,19 @@ return (
               </label>
               <textarea
                 id="triage-input"
-                placeholder="Ceritakan gejala yang Anda rasakan…"
+                placeholder="Ceritakan gejala yang Anda rasakan..."
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
                 ref={inputRef}
                 rows={1}
                 disabled={isStreaming || sessionStatus === "completed"}
-                className="tap-target h-14 flex-1 resize-none rounded-card border border-input bg-background px-4 py-3 text-body shadow-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                className="tap-target h-14 flex-1 resize-none rounded-[22px] border border-border/60 bg-background/90 px-4 py-3 text-body shadow-sm outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
               />
               <button
                 ref={sendButtonRef}
                 type="submit"
                 disabled={isStreaming || sessionStatus === "completed" || !inputValue.trim()}
-                className="interactive tap-target inline-flex h-14 items-center justify-center rounded-full bg-primary-gradient px-6 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+                className="interactive tap-target inline-flex h-14 items-center justify-center rounded-[22px] bg-primary-gradient px-6 text-sm font-semibold text-white shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70"
                 aria-label="Kirim jawaban"
               >
                 <Send className="h-5 w-5" />
@@ -720,7 +832,7 @@ return (
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="card-surface space-y-4 rounded-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background p-5 shadow-lg"
+            className="space-y-5 rounded-[28px] border border-primary/40 bg-gradient-to-br from-primary/10 via-background to-background/95 p-6 shadow-xl backdrop-blur-sm"
           >
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
@@ -739,7 +851,7 @@ return (
 
             {/* OTC Recommendations */}
             {summary.recommendation?.type === "otc" && otcSuggestions.length > 0 ? (
-              <div className="space-y-3 rounded-lg border border-border/60 bg-background p-4">
+              <div className="space-y-3 rounded-[20px] border border-border/50 bg-background/95 p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
@@ -751,9 +863,9 @@ return (
                     <li key={idx} className="rounded-lg border border-border/40 bg-muted/30 p-3">
                       <div className="font-semibold text-foreground">{s.name} {s.strength}</div>
                       <div className="mt-1 text-sm text-muted-foreground">
-                        <span className="font-medium">{s.dose}</span> • {s.frequency} • {s.duration}
+                        <span className="font-medium">{s.dose}</span> | {s.frequency} | {s.duration}
                       </div>
-                      {s.notes ? <div className="mt-2 rounded bg-background p-2 text-xs text-muted-foreground">💡 {s.notes}</div> : null}
+                      {s.notes ? <div className="mt-2 rounded bg-background p-2 text-xs text-muted-foreground">Catatan: {s.notes}</div> : null}
                     </li>
                   ))}
                 </ul>
@@ -766,7 +878,7 @@ return (
             ) : null}
 
             {/* Action Buttons */}
-            <div className="space-y-3 rounded-lg border border-border/60 bg-background p-4">
+            <div className="space-y-3 rounded-[20px] border border-border/50 bg-background/95 p-4 shadow-sm">
               <p className="text-sm font-semibold text-foreground">Pilih tindakan selanjutnya:</p>
               <div className="grid gap-2">
                 {summary.recommendation?.type === "otc" && otcSuggestions.length > 0 ? (
@@ -821,6 +933,141 @@ type StreamParams = {
   context: TriageRequestContext | null;
   history: ApiChatMessage[];
 };
+
+type SessionHeaderProps = {
+  status: "active" | "completed";
+  onReset: () => void;
+  disabled: boolean;
+  updatedLabel: string;
+  summary: TriageSummary;
+  theme: RiskTheme;
+};
+
+function SessionHeader({ status, onReset, disabled, updatedLabel, summary, theme }: SessionHeaderProps) {
+  const Icon = theme.icon;
+  return (
+    <div className="relative overflow-hidden border-b border-border/60">
+      <div className={cn("absolute inset-0 bg-gradient-to-r", theme.gradient)} aria-hidden />
+      <div className="relative flex flex-col gap-4 px-4 py-5 text-white md:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20">
+              <Icon className="h-5 w-5" aria-hidden />
+            </span>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+                Status triase
+              </p>
+              <p className="text-lg font-semibold">{theme.label}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={disabled}
+            className="tap-target inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+            Mulai sesi baru
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
+          <span
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold",
+              theme.badge,
+            )}
+          >
+            <span className={cn("h-2 w-2 rounded-full", theme.accentDot)} aria-hidden />
+            {status === "completed" ? "Sesi selesai" : "Sesi sedang berjalan"}
+          </span>
+          <span>Terakhir diperbarui {updatedLabel}</span>
+          <span className="hidden rounded-full border border-white/30 px-3 py-1 text-xs md:inline">
+            Durasi gejala: {summary.duration}
+          </span>
+        </div>
+        <p className="text-sm text-white/90">{theme.description}</p>
+      </div>
+    </div>
+  );
+}
+
+function TimelineDivider({ label, highlight }: { label: string; highlight: boolean }) {
+  return (
+    <div className="relative flex items-center justify-center py-3">
+      <span className="absolute inset-x-0 h-px bg-border/60" aria-hidden />
+      <span
+        className={cn(
+          "relative inline-flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm",
+          highlight && "border-primary/40 bg-primary/5 text-primary",
+        )}
+      >
+        {highlight ? <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden /> : null}
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function getTimelineMeta(timestamp?: string) {
+  if (!timestamp) return null;
+  const parsed = parseMessageDate(timestamp);
+  if (!parsed) return null;
+  return { label: formatTimelineLabel(parsed), isToday: isToday(parsed) };
+}
+
+function parseMessageDate(value: string): Date | null {
+  const date = new Date(value);
+  if (!Number.isNaN(date.getTime())) {
+    return date;
+  }
+  return null;
+}
+
+const timelineLabelFormatter = new Intl.DateTimeFormat("id-ID", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+
+function formatTimelineLabel(date: Date): string {
+  return timelineLabelFormatter.format(date);
+}
+
+function isToday(date: Date): boolean {
+  const now = new Date();
+  return (
+    now.getFullYear() === date.getFullYear() &&
+    now.getMonth() === date.getMonth() &&
+    now.getDate() === date.getDate()
+  );
+}
+
+function formatSummaryUpdated(updatedAt?: string): string {
+  if (!updatedAt) {
+    return "baru saja";
+  }
+  const date = new Date(updatedAt);
+  if (Number.isNaN(date.getTime())) {
+    return "baru saja";
+  }
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.round(diffMs / (1000 * 60));
+  const rtf = new Intl.RelativeTimeFormat("id-ID", { numeric: "auto" });
+
+  if (Math.abs(diffMinutes) < 60) {
+    return rtf.format(-diffMinutes, "minute");
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (Math.abs(diffHours) < 24) {
+    return rtf.format(-diffHours, "hour");
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return rtf.format(-diffDays, "day");
+}
 
 async function streamTriageResponse({
   aiMessageId,
@@ -990,11 +1237,11 @@ function OTCBubble({ suggestions, timestamp }: { suggestions: Array<{ name: stri
           <li key={idx} className="rounded-lg border border-border/40 bg-background/80 p-3">
             <div className="font-semibold text-foreground">{s.name} {s.strength}</div>
             <div className="mt-1 text-sm text-muted-foreground">
-              <span className="font-medium">{s.dose}</span> • {s.frequency} • {s.duration}
+              <span className="font-medium">{s.dose}</span> | {s.frequency} | {s.duration}
             </div>
             {s.notes ? (
               <div className="mt-2 rounded bg-muted/50 p-2 text-xs text-muted-foreground">
-                💡 {s.notes}
+                Catatan: {s.notes}
               </div>
             ) : null}
           </li>

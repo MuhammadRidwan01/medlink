@@ -14,6 +14,7 @@ export type ProfileSummary = {
   address: string | null;
   heightCm: number | null;
   weightKg: number | null;
+  officeAddress: string | null;
 };
 
 export type AllergySeverity = "mild" | "moderate" | "severe";
@@ -47,6 +48,7 @@ type SnapshotApiResponse = {
     address: string | null;
     height_cm: number | null;
     weight_kg: number | null;
+    office_address: string | null;
   } | null;
   allergies: Array<{
     id: number;
@@ -112,6 +114,7 @@ type SnapshotMutation =
         bloodType?: string | null;
         phone?: string | null;
         address?: string | null;
+        officeAddress?: string | null;
       };
     };
 
@@ -173,6 +176,7 @@ const mapSnapshotResponse = (
         address: payload.profile.address,
         heightCm: payload.profile.height_cm,
         weightKg: payload.profile.weight_kg,
+        officeAddress: payload.profile.office_address,
       }
     : null,
   allergies: payload.allergies.map((item) => ({
