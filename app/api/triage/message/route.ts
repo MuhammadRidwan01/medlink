@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   }
 
   // Verify session belongs to user
-  const { data: session } = await supabase
+  const { data: session } = await (supabase as any)
     .from("triage_sessions")
     .select("id, patient_id")
     .eq("id", sessionId)
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   }
 
   // Insert message
-  const { data: message, error } = await supabase
+  const { data: message, error } = await (supabase as any)
     .from("triage_messages")
     .insert({
       session_id: sessionId,

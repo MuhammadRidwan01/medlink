@@ -23,10 +23,17 @@ export async function POST() {
     .maybeSingle();
 
   if (active) {
-    await supabase
+    const { error: completeErr } = await supabase
       .from("triage_sessions")
       .update({ status: "completed", completed_at: now, updated_at: now })
       .eq("id", active.id);
+    if (completeErr) {
+      console.error("[triage/session/reset] failed to complete active session:", completeErr);
+      return new Response(
+        JSON.stringify({ error: "Failed to complete active session", detail: completeErr.message ?? String(completeErr) }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
   }
 
   const summary = createEmptyTriageSummary();
@@ -37,7 +44,11 @@ export async function POST() {
     .single();
 
   if (createError) {
-    return new Response(JSON.stringify({ error: "Failed to create new session" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    console.error("[triage/session/reset] failed to create new session:", createError);
+    return new Response(
+      JSON.stringify({ error: "Failed to create new session", detail: createError.message ?? String(createError) }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
   }
 
   return new Response(JSON.stringify({ ok: true, session: created }), { status: 200, headers: { "Content-Type": "application/json" } });

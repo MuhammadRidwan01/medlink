@@ -72,6 +72,7 @@ export async function GET() {
 
     // Get user's triage sessions
     const { data: triageSessions, error: triageError } = await supabase
+      .schema("clinical")
       .from("triage_sessions")
       .select(`
         id,

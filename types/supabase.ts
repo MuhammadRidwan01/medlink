@@ -85,6 +85,30 @@ export type Database = {
         }
         Relationships: []
       }
+      doctors: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          license_no: string
+          specialty: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_active?: boolean
+          license_no: string
+          specialty: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          license_no?: string
+          specialty?: string
+        }
+        Relationships: []
+      }
       prescription_items: {
         Row: {
           duration: string | null
@@ -184,7 +208,6 @@ export type Database = {
       }
       triage_sessions: {
         Row: {
-          completed_at: string | null
           created_at: string
           doctor_id: string | null
           id: string
@@ -195,7 +218,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          completed_at?: string | null
           created_at?: string
           doctor_id?: string | null
           id?: string
@@ -206,7 +228,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          completed_at?: string | null
           created_at?: string
           doctor_id?: string | null
           id?: string
@@ -265,7 +286,7 @@ export type Database = {
             foreignKeyName: "cart_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "products"
+            referencedRelation: "marketplace_products"
             referencedColumns: ["id"]
           },
         ]
@@ -285,6 +306,63 @@ export type Database = {
           created_at?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      marketplace_products: {
+        Row: {
+          badges: string[]
+          categories: string[]
+          contraindications: Json
+          created_at: string
+          id: string
+          image_url: string | null
+          inventory_status: string
+          long_description: string | null
+          name: string
+          price: number
+          rating: number
+          rating_count: number
+          short_description: string | null
+          slug: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          badges?: string[]
+          categories?: string[]
+          contraindications?: Json
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          inventory_status?: string
+          long_description?: string | null
+          name: string
+          price?: number
+          rating?: number
+          rating_count?: number
+          short_description?: string | null
+          slug: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          badges?: string[]
+          categories?: string[]
+          contraindications?: Json
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          inventory_status?: string
+          long_description?: string | null
+          name?: string
+          price?: number
+          rating?: number
+          rating_count?: number
+          short_description?: string | null
+          slug?: string
+          tags?: string[]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -322,7 +400,7 @@ export type Database = {
             foreignKeyName: "order_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "products"
+            referencedRelation: "marketplace_products"
             referencedColumns: ["id"]
           },
         ]
@@ -583,6 +661,101 @@ export type Database = {
         }
         Relationships: []
       }
+      prescription_items: {
+        Row: {
+          code: string | null
+          created_at: string
+          dose: string | null
+          duration: string | null
+          frequency: string | null
+          id: number
+          medication_type: string | null
+          name: string
+          notes: string | null
+          prescription_id: string
+          requires_approval: boolean | null
+          strength: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          dose?: string | null
+          duration?: string | null
+          frequency?: string | null
+          id?: number
+          medication_type?: string | null
+          name: string
+          notes?: string | null
+          prescription_id: string
+          requires_approval?: boolean | null
+          strength?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          dose?: string | null
+          duration?: string | null
+          frequency?: string | null
+          id?: number
+          medication_type?: string | null
+          name?: string
+          notes?: string | null
+          prescription_id?: string
+          requires_approval?: boolean | null
+          strength?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescription_items_prescription_id_fkey"
+            columns: ["prescription_id"]
+            isOneToOne: false
+            referencedRelation: "prescriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prescriptions: {
+        Row: {
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          doctor_id: string | null
+          id: string
+          patient_id: string
+          rejection_reason: string | null
+          status: string
+          triage_session_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          doctor_id?: string | null
+          id?: string
+          patient_id: string
+          rejection_reason?: string | null
+          status?: string
+          triage_session_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          doctor_id?: string | null
+          id?: string
+          patient_id?: string
+          rejection_reason?: string | null
+          status?: string
+          triage_session_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -590,10 +763,12 @@ export type Database = {
           created_at: string | null
           dob: string | null
           email: string | null
+          height_cm: number | null
           id: string
           name: string | null
           phone: string | null
           sex: string | null
+          weight_kg: number | null
         }
         Insert: {
           address?: string | null
@@ -601,10 +776,12 @@ export type Database = {
           created_at?: string | null
           dob?: string | null
           email?: string | null
+          height_cm?: number | null
           id: string
           name?: string | null
           phone?: string | null
           sex?: string | null
+          weight_kg?: number | null
         }
         Update: {
           address?: string | null
@@ -612,19 +789,115 @@ export type Database = {
           created_at?: string | null
           dob?: string | null
           email?: string | null
+          height_cm?: number | null
           id?: string
           name?: string | null
           phone?: string | null
           sex?: string | null
+          weight_kg?: number | null
         }
         Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      marketplace_products: {
+        Row: {
+          badges: string[] | null
+          categories: string[] | null
+          contraindications: Json | null
+          created_at: string | null
+          id: string | null
+          image_url: string | null
+          inventory_status: string | null
+          long_description: string | null
+          name: string | null
+          price: number | null
+          rating: number | null
+          rating_count: number | null
+          short_description: string | null
+          slug: string | null
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          badges?: string[] | null
+          categories?: string[] | null
+          contraindications?: Json | null
+          created_at?: string | null
+          id?: string | null
+          image_url?: string | null
+          inventory_status?: string | null
+          long_description?: string | null
+          name?: string | null
+          price?: number | null
+          rating?: number | null
+          rating_count?: number | null
+          short_description?: string | null
+          slug?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          badges?: string[] | null
+          categories?: string[] | null
+          contraindications?: Json | null
+          created_at?: string | null
+          id?: string | null
+          image_url?: string | null
+          inventory_status?: string | null
+          long_description?: string | null
+          name?: string | null
+          price?: number | null
+          rating?: number | null
+          rating_count?: number | null
+          short_description?: string | null
+          slug?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      add_to_cart: {
+        Args: { p_product_id: string; p_qty?: number }
+        Returns: undefined
+      }
+      cart_items_detailed: {
+        Args: never
+        Returns: {
+          product: Json
+          quantity: number
+        }[]
+      }
+      create_order_from_items: { Args: { p_payload: Json }; Returns: Json }
+      ensure_cart: { Args: never; Returns: string }
+      get_doctors: {
+        Args: never
+        Returns: Database["clinical"]["Tables"]["doctors"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "doctors"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      is_doctor: { Args: never; Returns: boolean }
+      remove_from_cart: { Args: { p_product_id: string }; Returns: undefined }
+      update_cart_item: {
+        Args: { p_product_id: string; p_qty: number }
+        Returns: undefined
+      }
+      upsert_doctor: {
+        Args: { license_no: string; specialty: string }
+        Returns: Database["clinical"]["Tables"]["doctors"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "doctors"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
