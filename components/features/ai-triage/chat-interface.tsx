@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, AlertTriangle, ArrowDown, X } from "lucide-react";
 import { useMarketplaceCart } from "@/components/features/marketplace/store";
 import { createClient } from "@/lib/supabase/client";
-import { OTCBubble } from "./otc-bubble";
-import { AppointmentBubble } from "./appointment-bubble";
 import { PrescriptionBubble } from "./prescription-bubble";
 import { cn } from "@/lib/utils";
 import { ChatMessage, type ChatMessageProps } from "./chat-message";

@@ -22,6 +22,7 @@ export default async function PatientTriagePage() {
   }
 
   const { data: existingSession } = await supabase
+    .schema("clinical")
     .from("triage_sessions")
     .select("id, summary")
     .eq("patient_id", user.id)
@@ -40,6 +41,7 @@ export default async function PatientTriagePage() {
   if (existingSession) {
     const summary = coerceTriageSummary(existingSession.summary, createEmptyTriageSummary());
     const { data: dbMessages } = await supabase
+      .schema("clinical")
       .from("triage_messages")
       .select("id, role, content, created_at, metadata")
       .eq("session_id", existingSession.id)

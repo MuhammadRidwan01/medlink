@@ -39,6 +39,7 @@ export default async function ConsultationDetailPage({
   }
 
   const { data: session } = await supabase
+    .schema("clinical")
     .from("triage_sessions")
     .select("id, patient_id, summary")
     .eq("id", id)
@@ -50,6 +51,7 @@ export default async function ConsultationDetailPage({
 
   const summary: TriageSummary = coerceTriageSummary(session.summary, createEmptyTriageSummary());
   const { data: dbMessages } = await supabase
+    .schema("clinical")
     .from("triage_messages")
     .select("id, role, content, created_at, metadata")
     .eq("session_id", session.id)
