@@ -33,7 +33,6 @@ export async function GET() {
 
     // Get triage sessions assigned to this doctor (high/emergency risk)
     const { data: triageSessions, error: triageError } = await supabase
-      .schema("clinical")
       .from("triage_sessions")
       .select(`
         id,

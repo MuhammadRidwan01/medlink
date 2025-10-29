@@ -232,7 +232,7 @@ export async function POST(request: Request) {
       if (completed && accumulated.trim()) {
         const parsedSummary = parseTriageInsight(accumulated, sessionSummary);
         await Promise.all([
-          (supabase as any)
+          supabase
             .from("triage_messages")
             .insert({
               session_id: session.id,
@@ -243,12 +243,12 @@ export async function POST(request: Request) {
                 red_flags: parsedSummary.redFlags,
               },
             })
-            .then(({ error }: any) => {
+            .then(({ error }) => {
               if (error) {
                 console.error("[triage] failed to insert ai message", error);
               }
             }),
-          (supabase as any)
+          supabase
             .from("triage_sessions")
             .update({
               risk_level: parsedSummary.riskLevel,
@@ -256,7 +256,7 @@ export async function POST(request: Request) {
               updated_at: new Date().toISOString(),
             })
             .eq("id", session.id)
-            .then(({ error }: any) => {
+            .then(({ error }) => {
               if (error) {
                 console.error("[triage] failed to update session summary", error);
               }
@@ -365,10 +365,8 @@ export async function POST(request: Request) {
           requestedSessionId?: string | null,
           clientTimestamp?: string,
         ) {
-          const db = supabase as any;
-
           if (requestedSessionId) {
-            const { data, error } = await db
+            const { data, error } = await supabase
               .from("triage_sessions")
               .select("*")
               .eq("id", requestedSessionId)
@@ -387,7 +385,7 @@ export async function POST(request: Request) {
             }
           }
 
-          const { data: existing, error: existingError } = await (supabase as any)
+          const { data: existing, error: existingError } = await supabase
             .from("triage_sessions")
             .select("*")
             .eq("patient_id", patientId)
@@ -414,7 +412,7 @@ export async function POST(request: Request) {
           timestamp: string,
           summary: TriageSummary,
         ) {
-          const { data, error } = await (supabase as any)
+          const { data, error } = await supabase
             .from("triage_sessions")
             .insert({
               patient_id: patientId,
@@ -444,7 +442,7 @@ export async function POST(request: Request) {
             return;
           }
 
-          const { data: existing } = await (supabase as any)
+          const { data: existing } = await supabase
             .from("triage_messages")
             .select("id")
             .eq("session_id", sessionId)
@@ -455,7 +453,7 @@ export async function POST(request: Request) {
             return;
           }
 
-          const { error } = await (supabase as any).from("triage_messages").insert({
+          const { error } = await supabase.from("triage_messages").insert({
             session_id: sessionId,
             role: "user",
             content: latestMessage.content,

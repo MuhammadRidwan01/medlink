@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, AlertTriangle, ArrowDown, X } from "lucide-react";
-import { useMarketplaceCart } from "@/components/features/marketplace/store";
-import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 import { PrescriptionBubble } from "./prescription-bubble";
 import { cn } from "@/lib/utils";
 import { ChatMessage, type ChatMessageProps } from "./chat-message";
@@ -24,6 +23,7 @@ import {
   type RiskLevel,
   type TriageSummary,
 } from "@/types/triage";
+import { useAddSuggestionsToCart } from "./use-add-suggestions-to-cart";
 
 type ApiChatMessage = {
   role: "user" | "assistant";
@@ -1114,75 +1114,23 @@ function AppointmentBubble({ summary, onClose }: { summary: TriageSummary; onClo
   );
 }
 
-function AddToCartButton({ suggestions }: { suggestions: Array<{ name: string; code: string }> }) {
-  const addItem = useMarketplaceCart((state) => state.addItem);
-  const toggle = useMarketplaceCart((state) => state.toggle);
-  const [adding, setAdding] = useState(false);
+function AddToCartButton({ suggestions }: { suggestions: Array<{ name: string; code?: string }> }) {
+  const addSuggestions = useAddSuggestionsToCart();
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddToCart = async () => {
-    setAdding(true);
-    let addedCount = 0;
-    const notFound: string[] = [];
-    const supabase = createClient();
-
-    for (const s of suggestions) {
-      const searchTerm = s.name.toLowerCase();
-      let row: { id: string; slug: string | null; title: string | null; price: number | null } | null = null;
-
-      try {
-        // 1) Exact slug match (preferred)
-        if (s.code) {
-          const { data } = await (supabase as any)
-            .from("commerce.products")
-            .select("id, slug, title, price")
-            .eq("slug", s.code)
-            .maybeSingle();
-          if (data) row = data as any;
-        }
-
-        // 2) Fallback: fuzzy search by slug/title
-        if (!row) {
-          const { data } = await (supabase as any)
-            .from("commerce.products")
-            .select("id, slug, title, price")
-            .or(`slug.ilike.%${searchTerm}%,title.ilike.%${searchTerm}%`)
-            .limit(1);
-          if (data && data.length) row = data[0] as any;
-        }
-
-        if (row?.id) {
-          // Construct minimal product to satisfy cart.addItem typing
-          const product = {
-            id: row.id,
-            slug: row.slug ?? "",
-            name: row.title ?? row.slug ?? s.name,
-            shortDescription: "",
-            longDescription: "",
-            price: Number(row.price ?? 0),
-            imageUrl: "",
-            categories: [],
-            tags: [],
-            rating: 0,
-            ratingCount: 0,
-            inventoryStatus: "in-stock" as const,
-          };
-          await addItem(product);
-          addedCount++;
-        } else {
-          notFound.push(s.name);
-        }
-      } catch (e) {
-        console.error("Lookup product failed", e);
-        notFound.push(s.name);
-      }
+    if (isSubmitting || suggestions.length === 0) {
+      return;
     }
-
-    setAdding(false);
-    if (addedCount > 0) {
-      toggle(true); // Open cart sheet
+    setIsSubmitting(true);
+    const { added, failed } = await addSuggestions(suggestions, { syncCheckout: true });
+    setIsSubmitting(false);
+    if (failed.length) {
+      console.warn("[triage] produk tidak ditemukan:", failed);
     }
-    if (notFound.length > 0) {
-      console.warn("Produk tidak ditemukan:", notFound);
+    if (added > 0) {
+      router.push("/patient/checkout");
     }
   };
 
@@ -1190,18 +1138,23 @@ function AddToCartButton({ suggestions }: { suggestions: Array<{ name: string; c
     <button
       type="button"
       onClick={handleAddToCart}
-      disabled={adding}
-      className="tap-target flex w-full items-center justify-center gap-2 rounded-lg bg-primary-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg disabled:opacity-60"
+      disabled={isSubmitting || suggestions.length === 0}
+      className="tap-target flex w-full items-center justify-center gap-2 rounded-lg bg-primary-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {adding ? (
+      {isSubmitting ? (
         <>
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           <span>Menambahkan ke keranjang...</span>
         </>
       ) : (
         <>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+            />
           </svg>
           <span>Tambah ke Keranjang & Checkout</span>
         </>

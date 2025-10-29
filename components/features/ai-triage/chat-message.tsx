@@ -122,7 +122,11 @@ function renderMessageContent(content: string) {
         </ul>
       );
     }
-    return (
+    if (block.type === "code") {
+      if (block.language?.toLowerCase() === "json") {
+        return null;
+      }
+      return (
       <div
         key={`code-${index}`}
         className="rounded-card border border-border/60 bg-muted/40 text-xs"
@@ -137,6 +141,8 @@ function renderMessageContent(content: string) {
         </pre>
       </div>
     );
+    }
+    return null;
   });
 }
 
