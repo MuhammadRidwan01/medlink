@@ -4,6 +4,7 @@ import { Bell, LogOut, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import { useSession } from "@/hooks/use-session";
 import { getDashboardPath } from "@/lib/auth/role";
@@ -56,6 +57,7 @@ export function Header({ title, className, onMenuClick, children }: HeaderProps)
       </Link>
       <div className="ml-auto flex items-center gap-2">
         {children}
+        <ThemeToggle />
         {showDashboardButton ? (
           <Link
             href={dashboardHref}
