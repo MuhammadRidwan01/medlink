@@ -99,23 +99,24 @@ export default function TriageHistoryPage() {
     <PageShell
       title="Riwayat Triage"
       subtitle="Lihat riwayat sesi triage AI Anda"
+      variant="patient"
     >
       {loading ? (
-        <div className="flex items-center justify-center py-24">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/30 border-t-primary"></div>
+        <div className="patient-panel flex items-center justify-center px-6 py-20">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/25 border-t-primary" />
         </div>
       ) : sessions.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-card border-2 border-dashed border-border bg-muted/30 py-24 text-center">
-          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+        <div className="patient-panel flex flex-col items-center justify-center px-8 py-24 text-center shadow-[0_26px_60px_-40px_rgba(6,182,212,0.45)]">
+          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-primary/20 bg-primary/10 shadow-inner">
             <HistoryIcon className="h-10 w-10 text-primary" />
           </div>
           <h3 className="mb-2 text-lg font-semibold text-foreground">Belum Ada Riwayat</h3>
-          <p className="mb-6 text-sm text-muted-foreground">
-            Mulai sesi triage untuk melihat riwayat Anda
+          <p className="mb-6 max-w-sm text-sm text-muted-foreground/80">
+            Mulai sesi triage untuk melihat ringkasan percakapan dan rekomendasi personal Anda.
           </p>
           <button
             onClick={() => router.push("/patient/triage")}
-            className="tap-target rounded-lg bg-primary-gradient px-6 py-3 font-semibold text-white shadow-md hover:shadow-lg"
+            className="button-primary px-6 py-3"
           >
             Mulai Triage Baru
           </button>
@@ -129,7 +130,7 @@ export default function TriageHistoryPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
               onClick={() => router.push(`/patient/triage?session=${session.id}`)}
-              className="tap-target group flex flex-col rounded-xl border-2 border-border bg-card p-5 text-left shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
+              className="tap-target group flex flex-col rounded-[24px] border border-white/60 bg-white/75 p-5 text-left shadow-[0_24px_55px_-40px_rgba(15,23,42,0.45)] transition-all hover:border-primary/30 hover:shadow-[0_30px_60px_-38px_rgba(6,182,212,0.45)] dark:border-slate-700/40 dark:bg-slate-900/60"
             >
               {/* Header */}
               <div className="mb-4 flex items-start justify-between">
@@ -180,13 +181,13 @@ export default function TriageHistoryPage() {
               </div>
 
               {/* Footer Meta */}
-              <div className="flex items-center justify-between border-t border-border/50 pt-3 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between border-t border-white/40 pt-3 text-xs text-muted-foreground dark:border-slate-700/40">
                 <span className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
+                  <Clock className="h-3.5 w-3.5 text-primary/70" />
                   {formatDate(session.created_at)}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <MessageSquare className="h-3.5 w-3.5" />
+                  <MessageSquare className="h-3.5 w-3.5 text-primary/70" />
                   {session.messageCount} pesan
                 </span>
               </div>

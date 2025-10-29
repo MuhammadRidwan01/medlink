@@ -119,7 +119,7 @@ export function MedsCard({ loading }: MedsCardProps) {
 
   if (loading) {
     return (
-      <section className="rounded-card border border-border/60 bg-card p-5 shadow-sm">
+      <section className="patient-panel px-6 py-6">
         <div className="h-4 w-36 animate-pulse rounded bg-muted/50" />
         <div className="mt-4 space-y-3">
           <div className="h-16 w-full animate-pulse rounded bg-muted/30" />
@@ -131,7 +131,7 @@ export function MedsCard({ loading }: MedsCardProps) {
 
   return (
     <section
-      className="rounded-card border border-border/60 bg-card p-5 shadow-sm"
+      className="patient-panel px-6 py-6"
       aria-labelledby="meds-title"
     >
       <header className="flex flex-wrap items-center justify-between gap-3">

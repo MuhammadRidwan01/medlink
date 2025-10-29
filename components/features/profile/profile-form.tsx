@@ -56,7 +56,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
 
   if (loading || !hydrated) {
     return (
-      <section className="rounded-card border border-border/60 bg-card p-5 shadow-sm">
+      <section className="patient-panel px-6 py-6">
         <div className="h-4 w-32 animate-pulse rounded bg-muted/50" />
         <div className="mt-4 space-y-3">
           <div className="h-12 w-full animate-pulse rounded bg-muted/30" />
@@ -73,7 +73,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: standardEase }}
-      className="rounded-card border border-border/60 bg-card p-5 shadow-sm"
+      className="patient-panel px-6 py-6"
     >
       <header className="flex items-center justify-between gap-3">
         <div>
@@ -124,7 +124,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-muted-foreground">Nama lengkap</span>
-          <div className="flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 shadow-sm">
+          <div className="flex items-center gap-2 rounded-input border border-white/60 bg-white/80 px-3 py-2 shadow-[0_14px_32px_-26px_rgba(15,23,42,0.35)] dark:border-slate-700/40 dark:bg-slate-900/60">
             <User className="h-4 w-4 text-primary" aria-hidden="true" />
             <input
               type="text"
@@ -138,7 +138,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-muted-foreground">Email</span>
-          <div className="flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 shadow-sm">
+          <div className="flex items-center gap-2 rounded-input border border-white/60 bg-white/80 px-3 py-2 shadow-[0_14px_32px_-26px_rgba(15,23,42,0.35)] dark:border-slate-700/40 dark:bg-slate-900/60">
             <Mail className="h-4 w-4 text-primary" aria-hidden="true" />
             <input
               type="email"
@@ -152,7 +152,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-muted-foreground">Tanggal lahir</span>
-          <div className="flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 shadow-sm">
+          <div className="flex items-center gap-2 rounded-input border border-white/60 bg-white/80 px-3 py-2 shadow-[0_14px_32px_-26px_rgba(15,23,42,0.35)] dark:border-slate-700/40 dark:bg-slate-900/60">
             <Calendar className="h-4 w-4 text-primary" aria-hidden="true" />
             <input
               type="date"
@@ -165,7 +165,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-muted-foreground">Jenis kelamin</span>
-          <div className="relative flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 pr-9 shadow-sm">
+          <div className="relative flex items-center gap-2 rounded-input border border-white/60 bg-white/80 px-3 py-2 pr-9 shadow-[0_14px_32px_-26px_rgba(15,23,42,0.35)] dark:border-slate-700/40 dark:bg-slate-900/60">
             <User className="h-4 w-4 rotate-90 text-primary" aria-hidden="true" />
             <select
               value={sex}
@@ -185,7 +185,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm md:col-span-2">
           <span className="font-semibold text-muted-foreground">Golongan darah</span>
-          <div className="relative flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 pr-9 shadow-sm">
+          <div className="relative flex items-center gap-2 rounded-input border border-white/60 bg-white/80 px-3 py-2 pr-9 shadow-[0_14px_32px_-26px_rgba(15,23,42,0.35)] dark:border-slate-700/40 dark:bg-slate-900/60">
             <Droplet className="h-4 w-4 text-primary" aria-hidden="true" />
             <select
               value={bloodType}
@@ -212,7 +212,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-muted-foreground">Nomor telepon</span>
-          <div className="flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 shadow-sm">
+          <div className="flex items-center gap-2 rounded-input border border-white/60 bg-white/80 px-3 py-2 shadow-[0_14px_32px_-26px_rgba(15,23,42,0.35)] dark:border-slate-700/40 dark:bg-slate-900/60">
             <Phone className="h-4 w-4 text-primary" aria-hidden="true" />
             <input
               type="tel"
@@ -226,7 +226,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm md:col-span-2">
           <span className="font-semibold text-muted-foreground">Alamat lengkap</span>
-          <div className="flex items-start gap-2 rounded-input border border-border/60 bg-background px-3 py-2 shadow-sm">
+          <div className="flex items-start gap-2 rounded-input border border-white/60 bg-white/80 px-3 py-2 shadow-[0_14px_32px_-26px_rgba(15,23,42,0.35)] dark:border-slate-700/40 dark:bg-slate-900/60">
             <MapPin className="mt-1 h-4 w-4 text-primary" aria-hidden="true" />
             <textarea
               rows={3}

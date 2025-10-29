@@ -40,7 +40,7 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
 
   if (loading || storeLoading) {
     return (
-      <section className="rounded-card border border-border/60 bg-card p-5 shadow-sm">
+      <section className="patient-panel px-6 py-6">
         <div className="h-4 w-32 animate-pulse rounded bg-muted/50" />
         <div className="mt-4 space-y-3">
           <div className="h-3 w-full animate-pulse rounded bg-muted/40" />
@@ -57,7 +57,7 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-      className="rounded-card border border-border/60 bg-card p-5 shadow-sm"
+      className="patient-panel px-6 py-6"
       aria-label="Data vital"
     >
       <header className="flex items-center justify-between gap-3">
@@ -66,10 +66,10 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
           <button
             type="button"
             className={cn(
-              "tap-target rounded-button border px-2.5 py-1 font-semibold transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              "tap-target rounded-button border px-2.5 py-1 font-semibold transition shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               unit === "metric"
-                ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-border/60 bg-muted/20",
+                ? "border-primary/30 bg-primary/12 text-primary"
+                : "border-white/50 bg-white/60 text-muted-foreground/80 dark:border-slate-700/40 dark:bg-slate-900/60",
             )}
             onClick={() => setUnit("metric")}
             aria-pressed={unit === "metric"}
@@ -79,10 +79,10 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
           <button
             type="button"
             className={cn(
-              "tap-target rounded-button border px-2.5 py-1 font-semibold transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              "tap-target rounded-button border px-2.5 py-1 font-semibold transition shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               unit === "imperial"
-                ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-border/60 bg-muted/20",
+                ? "border-primary/30 bg-primary/12 text-primary"
+                : "border-white/50 bg-white/60 text-muted-foreground/80 dark:border-slate-700/40 dark:bg-slate-900/60",
             )}
             onClick={() => setUnit("imperial")}
             aria-pressed={unit === "imperial"}
@@ -114,7 +114,7 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
             <div className="grid gap-3 md:grid-cols-2">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="font-semibold text-muted-foreground">Tinggi (cm)</span>
-                <div className="flex items-center gap-2 rounded-card border border-border/60 bg-muted/20 px-3 py-2">
+                <div className="flex items-center gap-2 rounded-[14px] border border-white/60 bg-white/75 px-3 py-2 shadow-sm dark:border-slate-700/40 dark:bg-slate-900/60">
                   <Ruler className="h-4 w-4 text-primary" aria-hidden="true" />
                   <input
                     type="number"
@@ -129,7 +129,7 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
               </label>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="font-semibold text-muted-foreground">Berat (kg)</span>
-                <div className="flex items-center gap-2 rounded-card border border-border/60 bg-muted/20 px-3 py-2">
+                <div className="flex items-center gap-2 rounded-[14px] border border-white/60 bg-white/75 px-3 py-2 shadow-sm dark:border-slate-700/40 dark:bg-slate-900/60">
                   <Scale className="h-4 w-4 text-primary" aria-hidden="true" />
                   <input
                     type="number"

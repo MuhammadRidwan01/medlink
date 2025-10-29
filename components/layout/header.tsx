@@ -13,9 +13,16 @@ type HeaderProps = {
   className?: string;
   onMenuClick?: () => void;
   children?: React.ReactNode;
+  variant?: "default" | "glass";
 };
 
-export function Header({ title, className, onMenuClick, children }: HeaderProps) {
+export function Header({
+  title,
+  className,
+  onMenuClick,
+  children,
+  variant = "default",
+}: HeaderProps) {
   const pathname = usePathname();
   const isDoctorRoute = pathname?.startsWith("/doctor");
   const { status, role } = useSession();
@@ -25,10 +32,16 @@ export function Header({ title, className, onMenuClick, children }: HeaderProps)
   const isAuthRoute = pathname?.startsWith("/auth");
   const showDashboardButton = isAuthenticated && !onDashboard;
 
+  const variantClass =
+    variant === "glass"
+      ? "border-white/30 bg-white/75 text-foreground shadow-[0_18px_32px_-28px_rgba(15,23,42,0.65)] backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/65"
+      : "border-border bg-background/80";
+
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 flex items-center gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur duration-normal ease-out",
+        "sticky top-0 z-40 flex items-center gap-3 border-b px-4 py-3 backdrop-blur duration-normal ease-out",
+        variantClass,
         className,
       )}
     >

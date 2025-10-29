@@ -18,6 +18,9 @@ type SidebarProps = {
   className?: string;
   mobileOpen?: boolean;
   onNavigate?: () => void;
+  variant?: "default" | "floating";
+  desktopMode?: "sticky" | "static";
+  scrollable?: boolean;
 };
 
 export function Sidebar({
@@ -26,20 +29,47 @@ export function Sidebar({
   className,
   mobileOpen = false,
   onNavigate,
+  variant = "default",
+  desktopMode = "sticky",
+  scrollable = true,
 }: SidebarProps) {
   const pathname = usePathname();
+
+  const baseClass =
+    variant === "floating"
+      ? "border-0 bg-transparent md:border md:border-white/25 md:bg-white/75 md:shadow-[0_24px_45px_-30px_rgba(15,23,42,0.55)] md:backdrop-blur-lg dark:md:border-slate-700/60 dark:md:bg-slate-900/65"
+      : "border-r border-border bg-background";
+
+  const mobileClass =
+    variant === "floating"
+      ? "bg-white/95 shadow-xl backdrop-blur-xl dark:bg-slate-900/90"
+      : "bg-background shadow-xl";
+
+  const desktopPlacementClass =
+    desktopMode === "sticky"
+      ? "md:sticky md:top-24 md:max-h-[calc(100vh-6rem)] md:overflow-hidden"
+      : "md:relative md:self-start";
 
   return (
     <aside
       className={cn(
-        "w-72 shrink-0 border-r border-border bg-background px-4 py-6",
+        "w-72 shrink-0 px-4 py-6",
+        baseClass,
         mobileOpen
-          ? "fixed inset-y-0 left-0 z-50 flex flex-col overflow-y-auto shadow-xl md:relative md:flex"
-          : "hidden flex-col md:sticky md:top-24 md:flex md:max-h-[calc(100vh-6rem)] md:overflow-hidden",
+          ? cn(
+              "fixed inset-y-0 left-0 z-50 flex flex-col overflow-y-auto rounded-r-[28px] md:relative md:flex",
+              mobileClass,
+            )
+          : cn("hidden flex-col md:flex", desktopPlacementClass),
         className,
       )}
     >
-      <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
+      <nav
+        className={cn(
+          "flex-1 space-y-1 pr-1",
+          scrollable ? "overflow-y-auto" : "overflow-visible",
+        )}
+      >
         {items.map((item) => {
           const isActive =
             pathname === item.href ||

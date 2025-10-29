@@ -63,20 +63,37 @@ const patientNav = [
   },
 ] satisfies SidebarItem[];
 
+function PatientBackgroundCanvas() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="patient-grid h-full w-full" />
+      <div className="patient-spotlight" />
+      <div className="absolute -top-32 left-[12%] h-[420px] w-[420px] rounded-full bg-cyan-200/25 blur-3xl dark:bg-sky-500/20" />
+      <div className="absolute -bottom-24 right-[8%] h-[360px] w-[360px] rounded-full bg-teal-300/20 blur-3xl dark:bg-emerald-400/20" />
+      <div className="absolute top-[38%] left-1/2 h-[220px] w-[420px] -translate-x-1/2 rounded-full bg-white/40 blur-3xl dark:bg-slate-500/20" />
+    </div>
+  );
+}
+
 export default function PatientLayout({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const fallback = (
-    <div className="relative flex min-h-screen flex-col bg-muted/40 md:bg-background">
-      <div className="h-[68px] w-full bg-muted/50 md:h-[72px]" />
-      <div className="flex flex-1 gap-0 md:gap-6">
-        <div className="hidden w-72 md:block">
-          <div className="h-full rounded-r-card bg-muted/40" />
+    <div className="relative isolate flex min-h-screen flex-col overflow-hidden patient-aurora">
+      <PatientBackgroundCanvas />
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <div className="px-4 pb-4 pt-6 md:px-12 md:pb-8">
+          <div className="h-16 rounded-[28px] border border-white/30 bg-white/60 shadow-[0_18px_32px_-28px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/65 md:h-[72px]" />
         </div>
-        <main className="relative flex-1 px-4 pb-28 pt-4 md:px-8 md:pb-16 md:pt-8">
-          <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-            <SessionSkeleton />
+        <div className="flex flex-1 gap-0 md:gap-8 md:px-10 lg:px-16">
+          <div className="hidden w-72 md:block">
+            <div className="patient-panel h-full rounded-[28px]" />
           </div>
-        </main>
+          <main className="relative flex-1 px-4 pb-28 pt-4 md:px-0 md:pb-16 md:pt-0">
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+              <SessionSkeleton />
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );
@@ -84,34 +101,46 @@ export default function PatientLayout({ children }: { children: ReactNode }) {
   return (
     <Suspense fallback={fallback}>
       <SessionGate allowedRoles={["patient"]} fallback={fallback}>
-      <div className="relative flex min-h-screen flex-col bg-muted/40 md:bg-background">
-        <Header
-          title="Perawatan Pasien"
-          onMenuClick={() => setIsSidebarOpen((prev) => !prev)}
-          className="md:sticky"
-        />
-        <div className="flex flex-1 gap-0 md:gap-6">
-          {isSidebarOpen ? (
-            <div
-              role="presentation"
-              className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm transition-opacity md:hidden"
-              onClick={() => setIsSidebarOpen(false)}
+        <div className="relative isolate flex min-h-screen flex-col overflow-hidden patient-aurora">
+          <PatientBackgroundCanvas />
+          <div className="relative z-10 flex min-h-screen flex-col">
+            <Header
+              title="Perawatan Pasien"
+              onMenuClick={() => setIsSidebarOpen((prev) => !prev)}
+              className="md:px-12 md:py-4"
+              variant="glass"
             />
-          ) : null}
-          <Sidebar
-            items={patientNav}
-            mobileOpen={isSidebarOpen}
-            onNavigate={() => setIsSidebarOpen(false)}
-          />
-          <main className="relative flex-1 px-4 pb-28 pt-4 md:px-8 md:pb-16 md:pt-8">
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-              {children}
+            <div className="flex flex-1 gap-0 md:gap-10 md:px-10 lg:px-16">
+              {isSidebarOpen ? (
+                <div
+                  role="presentation"
+                  className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm transition-opacity md:hidden"
+                  onClick={() => setIsSidebarOpen(false)}
+                />
+              ) : null}
+              <div className="w-0 md:w-72 md:shrink-0 md:pr-2 lg:pr-4">
+                <div className="md:sticky md:top-[112px] md:pl-0">
+                  <Sidebar
+                    items={patientNav}
+                    mobileOpen={isSidebarOpen}
+                    onNavigate={() => setIsSidebarOpen(false)}
+                    variant="floating"
+                    desktopMode="static"
+                    scrollable={false}
+                    className="md:px-0 md:py-0"
+                  />
+                </div>
+              </div>
+              <main className="relative flex-1 px-4 pb-28 pt-6 md:px-0 md:pb-20 md:pt-8">
+                <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+                  {children}
+                </div>
+              </main>
             </div>
-          </main>
+            <BottomNav items={patientNav} />
+            <Fab href="/patient/triage" />
+          </div>
         </div>
-        <BottomNav items={patientNav} />
-        <Fab href="/patient/triage" />
-      </div>
       </SessionGate>
     </Suspense>
   );

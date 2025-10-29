@@ -462,26 +462,29 @@ export default function PatientDashboardPage() {
       <PageShell
         title="Ringkasan Pasien"
         subtitle="Navigasikan kontrol kesehatan Anda dalam satu tempat."
+        variant="patient"
       >
         <div className="space-y-6">
-          <section className="relative overflow-hidden rounded-[32px] border border-primary/40 bg-gradient-to-br from-primary/95 via-primary to-primary-dark px-6 py-8 text-white shadow-2xl">
-            <div className="absolute inset-0 opacity-70">
-              <div className="absolute left-[-10%] top-[-40%] h-48 w-48 rounded-full bg-white/25 blur-3xl" />
-              <div className="absolute right-[-15%] bottom-[-35%] h-64 w-64 rounded-full bg-white/20 blur-[120px]" />
+          <section className="patient-panel relative overflow-hidden px-6 py-7 md:px-9 md:py-9">
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+              <div className="absolute -left-24 top-8 h-44 w-44 rounded-full bg-primary/12 blur-3xl dark:bg-teal-500/12" />
+              <div className="absolute -right-16 bottom-12 h-52 w-52 rounded-full bg-sky-400/12 blur-3xl dark:bg-sky-500/18" />
+              <div className="absolute inset-x-12 bottom-0 h-24 bg-gradient-to-t from-white/70 via-white/20 to-transparent dark:from-slate-900/80 dark:via-slate-900/30" />
             </div>
-            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative flex flex-col gap-6 text-foreground lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
+                <p className="text-xs font-medium uppercase tracking-[0.28em] text-primary/70 dark:text-teal-200/70">
                   Ringkasan hari ini
                 </p>
-                <h1 className="text-3xl font-semibold sm:text-4xl">
+                <h1 className="text-3xl font-semibold sm:text-[34px]">
                   Halo, {greetingName}!
                 </h1>
-                <p className="max-w-xl text-sm text-white/80">
+                <p className="max-w-xl text-sm leading-relaxed text-muted-foreground/90">
                   Kami rangkum jadwal, pengingat obat, dan notifikasi terbaru supaya Anda fokus pada pemulihan.
                 </p>
                 {doctorNote ? (
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-xs font-medium text-white/90 backdrop-blur">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary shadow-sm backdrop-blur-sm dark:border-teal-400/30 dark:bg-teal-500/10 dark:text-teal-200">
                     <MessageSquare className="h-4 w-4" />
                     <span>{doctorNote.title}</span>
                   </div>
@@ -489,23 +492,20 @@ export default function PatientDashboardPage() {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 {triageAction ? (
-                  <Link
-                    href={triageAction.href}
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-primary shadow-md transition hover:shadow-lg"
-                  >
+                  <Link href={triageAction.href} className="button-primary px-6 py-2.5">
                     {triageAction.label}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 ) : null}
                 <Link
                   href={followUpHref}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/60 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                  className="interactive inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/70 px-5 py-2 text-sm font-semibold text-primary shadow-sm backdrop-blur-sm transition hover:bg-white/80 dark:border-teal-400/30 dark:bg-slate-900/60 dark:text-teal-200 dark:hover:bg-slate-900/70"
                 >
                   {nextAppointment ? "Kelola follow-up" : "Jadwalkan follow-up"}
                 </Link>
               </div>
             </div>
-            <div className="relative mt-6 grid gap-4 sm:grid-cols-3">
+            <div className="relative mt-8 grid gap-4 sm:grid-cols-3">
               {heroMetrics.map((metric) => (
                 <motion.div
                   key={metric.key}
@@ -515,32 +515,36 @@ export default function PatientDashboardPage() {
                 >
                   <div
                     className={[
-                      "group h-full rounded-[22px] border px-4 py-4 backdrop-blur transition",
+                      "patient-panel-muted h-full rounded-[18px] px-4 py-4 transition-all",
                       metric.tone === "accent"
-                        ? "border-white/40 bg-white/25 shadow-lg shadow-white/20"
-                        : "border-white/25 bg-white/15",
+                        ? "border border-primary/20 shadow-[0_24px_50px_-35px_rgba(6,182,212,0.65)]"
+                        : "border border-white/50 dark:border-slate-700/40",
                     ].join(" ")}
                   >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white">
-                      <metric.icon className="h-4 w-4" />
-                    </span>
-                    <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
-                      {metric.label}
-                    </p>
-                    <p className="mt-1 text-lg font-semibold text-white">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/10 text-primary dark:bg-teal-500/15 dark:text-teal-200">
+                        <metric.icon className="h-5 w-5" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {metric.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground/80">
+                          {metric.helper}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-2xl font-semibold text-foreground">
                       {metric.value}
-                    </p>
-                    <p className="mt-1 text-sm text-white/80">
-                      {metric.helper}
                     </p>
                   </div>
                 </motion.div>
               ))}
             </div>
           </section>
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)]">
-            <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)]">
+            <div className="space-y-6">
+          <div className="grid gap-5 md:grid-cols-2">
             {highlightCards.map((card) => (
               <motion.div
                 key={card.key}
@@ -551,7 +555,7 @@ export default function PatientDashboardPage() {
               >
                 <Link
                   href={card.href}
-                  className="group flex h-full items-center gap-3 rounded-card border border-border/50 bg-card/95 p-4 shadow-sm transition-colors hover:border-primary/40 hover:bg-card"
+                  className="group flex h-full items-center gap-4 rounded-[22px] px-5 py-5 patient-panel-muted shadow-[0_22px_45px_-36px_rgba(15,23,42,0.45)] transition-all hover:border-primary/25 hover:shadow-[0_30px_55px_-34px_rgba(6,182,212,0.45)]"
                 >
                   <span
                     className={[
@@ -587,9 +591,9 @@ export default function PatientDashboardPage() {
               >
                 <Link
                   href="/patient/profile"
-                  className="group flex h-full items-center gap-3 rounded-card border border-primary/50 bg-primary/5 p-4 shadow-sm transition-colors hover:border-primary/60 hover:bg-primary/10"
+                  className="group flex h-full items-center gap-4 rounded-[22px] border border-primary/25 bg-primary/5 px-5 py-5 shadow-[0_26px_55px_-40px_rgba(6,182,212,0.55)] transition-all hover:border-primary/35 hover:bg-primary/8 hover:shadow-[0_34px_60px_-38px_rgba(6,182,212,0.6)] dark:border-teal-400/30 dark:bg-teal-500/5 dark:hover:bg-teal-500/10"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/20 text-primary">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/18 text-primary dark:bg-teal-500/20 dark:text-teal-200">
                     <User className="h-5 w-5" />
                   </span>
                   <div className="flex-1">
@@ -614,7 +618,7 @@ export default function PatientDashboardPage() {
 
           <section
             id="jadwalkan-followup"
-            className="card-surface space-y-4 p-4"
+            className="patient-panel space-y-5 px-6 py-6"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -626,7 +630,7 @@ export default function PatientDashboardPage() {
                 </p>
               </div>
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               {quickActions.map((action) => (
                 <motion.div
                   key={action.key}
@@ -636,9 +640,9 @@ export default function PatientDashboardPage() {
                 >
                   <Link
                     href={action.href}
-                    className="group flex h-full items-start gap-3 rounded-card border border-transparent bg-gradient-to-br from-muted/40 via-muted/30 to-transparent p-4 transition-colors hover:border-primary/40 hover:bg-muted/50"
+                    className="group flex h-full items-start gap-4 rounded-[20px] border border-white/60 bg-white/75 p-5 shadow-[0_24px_50px_-40px_rgba(15,23,42,0.45)] transition-all hover:border-primary/25 hover:shadow-[0_30px_60px_-38px_rgba(6,182,212,0.45)] dark:border-slate-700/40 dark:bg-slate-900/55"
                   >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/15 text-primary">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/12 text-primary dark:bg-teal-500/15 dark:text-teal-200">
                       <action.icon className="h-5 w-5" />
                     </span>
                     <div className="flex-1">
@@ -655,8 +659,8 @@ export default function PatientDashboardPage() {
             </div>
           </section>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <section className="card-surface space-y-4 p-4">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <section className="patient-panel space-y-5 px-6 py-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-foreground">
                   Jadwal obat hari ini
@@ -673,22 +677,22 @@ export default function PatientDashboardPage() {
                   {upcomingDoses.map((dose) => (
                     <li
                       key={buildDoseKey(dose.prescriptionId, dose.id)}
-                      className="flex items-start justify-between gap-3 rounded-card border border-border/50 bg-muted/30 px-3 py-3"
+                      className="flex items-start justify-between gap-3 rounded-[18px] border border-white/60 bg-white/70 px-4 py-4 shadow-[0_18px_40px_-35px_rgba(15,23,42,0.35)] backdrop-blur-sm transition hover:border-primary/25 dark:border-slate-700/40 dark:bg-slate-900/55"
                     >
-                      <div>
+                      <div className="space-y-1">
                         <p className="text-sm font-semibold text-foreground">
                           {dose.prescriptionName}
                         </p>
-                        <p className="text-tiny text-muted-foreground">
+                        <p className="text-tiny text-muted-foreground/80">
                           {dose.segmentLabel} - {dose.time} WIB
                         </p>
                       </div>
                       <span
                         className={[
-                          "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold",
+                          "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-sm transition",
                           dose.status === "due"
-                            ? "bg-primary/20 text-primary"
-                            : "bg-muted/60 text-muted-foreground",
+                            ? "bg-primary/15 text-primary"
+                            : "bg-muted/40 text-muted-foreground",
                         ].join(" ")}
                       >
                         <span
@@ -705,13 +709,13 @@ export default function PatientDashboardPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="rounded-card border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+                <p className="rounded-[18px] border border-dashed border-primary/25 bg-primary/5 px-4 py-4 text-sm text-primary shadow-inner dark:border-teal-400/30 dark:bg-teal-500/5 dark:text-teal-100">
                   Semua dosis hari ini sudah tuntas. Pertahankan!
                 </p>
               )}
             </section>
 
-            <section className="card-surface space-y-4 p-4">
+            <section className="patient-panel space-y-5 px-6 py-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-foreground">
                   Aktivitas terbaru
@@ -741,14 +745,14 @@ export default function PatientDashboardPage() {
                       >
                         <Link
                           href={item.route ?? "/patient/notifications"}
-                          className="group flex items-start gap-3 rounded-card border border-transparent bg-muted/30 p-3 transition-colors hover:border-primary/30 hover:bg-muted/50"
+                          className="group flex items-start gap-4 rounded-[18px] border border-white/60 bg-white/75 px-4 py-4 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.4)] transition hover:border-primary/25 hover:shadow-[0_24px_50px_-34px_rgba(6,182,212,0.45)] dark:border-slate-700/40 dark:bg-slate-900/55"
                         >
                           <span
                             className={[
-                              "flex h-9 w-9 items-center justify-center rounded-button",
+                              "flex h-9 w-9 items-center justify-center rounded-button shadow-inner",
                               item.category === "doctor"
-                                ? "bg-primary/15 text-primary"
-                                : "bg-muted/60 text-muted-foreground",
+                                ? "bg-primary/12 text-primary"
+                                : "bg-muted/40 text-muted-foreground",
                             ].join(" ")}
                           >
                             <Icon className="h-4 w-4" />
@@ -758,7 +762,7 @@ export default function PatientDashboardPage() {
                               {item.title}
                             </p>
                             {item.description ? (
-                              <p className="text-tiny text-muted-foreground">
+                              <p className="text-tiny text-muted-foreground/80">
                                 {item.description}
                               </p>
                             ) : null}
@@ -771,7 +775,7 @@ export default function PatientDashboardPage() {
                     );
                   })
                 ) : (
-                  <p className="rounded-card border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+                  <p className="rounded-[18px] border border-dashed border-border/60 bg-muted/20 px-4 py-4 text-sm text-muted-foreground">
                     Belum ada aktivitas terbaru. Semua aman.
                   </p>
                 )}
@@ -780,8 +784,8 @@ export default function PatientDashboardPage() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <section className="card-surface space-y-4 p-4">
+        <div className="space-y-6">
+          <section className="patient-panel space-y-5 px-6 py-6">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">
                 Follow-up & jadwal
@@ -794,21 +798,20 @@ export default function PatientDashboardPage() {
               </Link>
             </div>
             {nextAppointmentDate ? (
-              <div className="space-y-3 rounded-card border border-border/60 bg-muted/20 p-4">
+              <div className="space-y-3 rounded-[20px] border border-white/60 bg-white/75 px-5 py-5 shadow-[0_20px_45px_-36px_rgba(15,23,42,0.4)] backdrop-blur-sm dark:border-slate-700/40 dark:bg-slate-900/55">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/15 text-primary">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/12 text-primary dark:bg-teal-500/15 dark:text-teal-200">
                     <CalendarCheck2 className="h-5 w-5" />
                   </span>
-                  <div className="flex-1">
+                  <div className="flex-1 space-y-2">
                     <p className="text-sm font-semibold text-foreground">
-                      {formatDateLabel(nextAppointmentDate)} -{" "}
-                      {nextAppointment?.time} WIB
+                      {formatDateLabel(nextAppointmentDate)} - {nextAppointment?.time} WIB
                     </p>
-                    <p className="text-tiny text-muted-foreground">
+                    <p className="text-tiny text-muted-foreground/80">
                       {formatRelativeTime(nextAppointmentDate.toISOString())}
                     </p>
                     {nextAppointment?.reason ? (
-                      <p className="mt-2 text-sm text-muted-foreground/90">
+                      <p className="text-sm text-muted-foreground/90">
                         Tujuan: {nextAppointment.reason}
                       </p>
                     ) : null}
@@ -816,19 +819,13 @@ export default function PatientDashboardPage() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-card border border-dashed border-primary/40 bg-primary/5 p-4">
-                <p className="text-sm font-medium text-primary">
-                  Belum ada follow-up yang dijadwalkan.
-                </p>
-                <p className="text-tiny text-primary/80">
-                  Pilih tanggal baru agar dokter dapat memantau perkembangan
-                  Anda.
-                </p>
+              <div className="rounded-[20px] border border-dashed border-primary/30 bg-primary/5 px-5 py-4 text-sm text-primary shadow-inner dark:border-teal-400/25 dark:bg-teal-500/5 dark:text-teal-100">
+                Belum ada follow-up yang dijadwalkan. Pilih tanggal baru agar dokter dapat memantau perkembangan Anda.
               </div>
             )}
           </section>
 
-          <section className="card-surface space-y-4 p-4">
+          <section className="patient-panel space-y-5 px-6 py-6">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">
                 Ringkasan pesanan
@@ -841,16 +838,16 @@ export default function PatientDashboardPage() {
               </Link>
             </div>
             {latestOrder ? (
-              <div className="space-y-3 rounded-card border border-border/60 bg-muted/20 p-4">
+              <div className="space-y-3 rounded-[20px] border border-white/60 bg-white/80 px-5 py-5 shadow-[0_22px_50px_-38px_rgba(15,23,42,0.4)] backdrop-blur-sm dark:border-slate-700/40 dark:bg-slate-900/60">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/15 text-primary">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/12 text-primary dark:bg-teal-500/15 dark:text-teal-200">
                     <Package className="h-5 w-5" />
                   </span>
-                  <div>
+                  <div className="space-y-1">
                     <p className="text-sm font-semibold text-foreground">
                       {latestOrder.id}
                     </p>
-                    <p className="text-tiny text-muted-foreground">
+                    <p className="text-tiny text-muted-foreground/80">
                       {formatOrderStatus(latestOrder.status)} -{" "}
                       {new Intl.DateTimeFormat("id-ID", {
                         day: "numeric",
@@ -863,7 +860,7 @@ export default function PatientDashboardPage() {
                   {latestOrder.items.slice(0, 2).map((item) => (
                     <li
                       key={item.id}
-                      className="flex items-center justify-between"
+                      className="flex items-center justify-between rounded-[14px] border border-white/70 bg-white/75 px-3 py-2 shadow-sm dark:border-slate-700/40 dark:bg-slate-900/60"
                     >
                       <span>{item.name}</span>
                       <span className="text-tiny text-muted-foreground/70">
@@ -877,15 +874,13 @@ export default function PatientDashboardPage() {
                     </li>
                   ) : null}
                 </ul>
-                <div className="flex items-center justify-between text-sm text-foreground">
+                <div className="flex items-center justify-between rounded-[16px] border border-primary/15 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-inner dark:border-teal-400/25 dark:bg-teal-500/10 dark:text-teal-100">
                   <span>Total</span>
-                  <span className="font-semibold">
-                    Rp{latestOrder.total.toLocaleString("id-ID")}
-                  </span>
+                  <span>Rp{latestOrder.total.toLocaleString("id-ID")}</span>
                 </div>
               </div>
             ) : (
-              <p className="rounded-card border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+              <p className="rounded-[20px] border border-dashed border-border/60 bg-muted/15 px-5 py-4 text-sm text-muted-foreground">
                 Belum ada pesanan aktif.
               </p>
             )}

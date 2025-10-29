@@ -99,8 +99,9 @@ export default function PatientProfilePage() {
       <PageShell
         title="Profil Pasien"
         subtitle="Perbarui data dasar, alergi, dan obat untuk sinkronisasi lintas fitur MedLink."
+        variant="patient"
       >
-        <div className="space-y-6">
+        <div className="space-y-8">
           <ProfileHeader
             name={headerProps.name}
             dob={headerProps.dob}
@@ -109,16 +110,16 @@ export default function PatientProfilePage() {
             loading={isLoading}
           />
           {profileMissingFields.length ? (
-            <div className="flex flex-col gap-3 rounded-card border border-primary/40 bg-primary/5 p-4 text-sm text-foreground shadow-sm">
+            <div className="patient-panel-muted flex flex-col gap-3 px-5 py-4 text-sm text-foreground shadow-[0_18px_45px_-36px_rgba(6,182,212,0.35)]">
               <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/15 text-primary">
+                <span className="flex h-10 w-10 items-center justify-center rounded-button bg-primary/12 text-primary dark:bg-teal-500/15 dark:text-teal-200">
                   <User className="h-5 w-5" aria-hidden="true" />
                 </span>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-primary">
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-semibold text-primary dark:text-teal-100">
                     Lengkapi data dasar Anda
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground/80">
                     {profileMissingFields.slice(0, 4).join(", ")}
                     {profileMissingFields.length > 4
                       ? " dan informasi lainnya belum terisi."
@@ -129,7 +130,7 @@ export default function PatientProfilePage() {
             </div>
           ) : null}
           <SnapshotBar />
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <VitalsCard
               initialHeightCm={profile?.heightCm ?? 170}
               initialWeightKg={profile?.weightKg ?? 65}
@@ -137,7 +138,7 @@ export default function PatientProfilePage() {
             />
             <ProfileForm loading={isLoading} />
           </div>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-6 lg:grid-cols-2">
             <AllergiesCard loading={isLoading} />
             <MedsCard loading={isLoading} />
           </div>
