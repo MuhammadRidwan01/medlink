@@ -2,11 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap");
 
 @layer base {
   :root {
-    --font-plus-jakarta: "Plus Jakarta Sans";
+    --font-sans: "Inter";
+    --font-display: "Outfit";
 
     /* Color tokens */
     --primary: 166 100% 45%;
@@ -100,19 +101,22 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
+    font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   }
 
   h1 {
     @apply text-h1;
+    font-family: var(--font-display), var(--font-sans), system-ui, -apple-system, sans-serif;
   }
 
   h2 {
     @apply text-h2;
+    font-family: var(--font-display), var(--font-sans), system-ui, -apple-system, sans-serif;
   }
 
   h3 {
     @apply text-h3;
+    font-family: var(--font-display), var(--font-sans), system-ui, -apple-system, sans-serif;
   }
 
   p {
@@ -137,6 +141,10 @@
 }
 
 @layer utilities {
+  .font-display {
+    font-family: var(--font-display), var(--font-sans), system-ui, -apple-system, sans-serif;
+  }
+
   .tap-target {
     min-height: 44px;
     min-width: 44px;

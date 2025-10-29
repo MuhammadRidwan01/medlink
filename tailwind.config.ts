@@ -73,7 +73,8 @@ const config: Config = {
         xl: "var(--shadow-xl)",
       },
       fontFamily: {
-        sans: ["var(--font-plus-jakarta)", ...fontFamily.sans],
+        sans: ["var(--font-sans)", ...fontFamily.sans],
+        display: ["var(--font-display)", "var(--font-sans)", ...fontFamily.sans],
       },
       fontSize: {
         h1: [
