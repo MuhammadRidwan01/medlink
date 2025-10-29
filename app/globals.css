@@ -104,6 +104,26 @@
     font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   }
 
+  /* Ensure native form controls are readable in dark mode */
+  select,
+  option,
+  input,
+  textarea {
+    color: hsl(var(--foreground));
+    background-color: hsl(var(--background));
+  }
+
+  /* Hint browsers to render native popovers (select/date) with dark palette */
+  .dark select,
+  .dark option,
+  .dark input,
+  .dark textarea,
+  .dark input[type="date"],
+  .dark input[type="time"],
+  .dark input[type="datetime-local"] {
+    color-scheme: dark;
+  }
+
   h1 {
     @apply text-h1;
     font-family: var(--font-display), var(--font-sans), system-ui, -apple-system, sans-serif;
@@ -137,6 +157,12 @@
 @layer components {
   .card-surface {
     @apply rounded-card bg-card shadow-sm transition-shadow duration-normal ease-out hover:shadow-lg;
+  }
+
+  /* Reusable primary action button styling */
+  .button-primary {
+    @apply interactive tap-target inline-flex items-center justify-center gap-2 rounded-button bg-primary-gradient px-4 py-2 text-sm font-semibold text-white text-center whitespace-nowrap shadow-md hover:shadow-lg active:brightness-95 disabled:cursor-not-allowed disabled:opacity-60;
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 }
 

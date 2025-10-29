@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cubicBezier, motion } from "framer-motion";
-import { Calendar, Droplet, Mail, MapPin, Phone, Save, User } from "lucide-react";
+import { Calendar, Droplet, Mail, MapPin, Phone, Save, User, ChevronDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useProfileStore } from "./store";
 
@@ -115,7 +115,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
             }
           }}
           disabled={isBusy}
-          className="tap-target inline-flex items-center gap-2 rounded-button border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-70"
+          className="button-primary min-w-[11rem]"
         >
           <Save className="h-4 w-4" aria-hidden="true" />
           {isBusy ? "Menyimpan..." : "Simpan perubahan"}
@@ -124,7 +124,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-muted-foreground">Nama lengkap</span>
-          <div className="flex items-center gap-2 rounded-card border border-border/60 bg-muted/20 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 shadow-sm">
             <User className="h-4 w-4 text-primary" aria-hidden="true" />
             <input
               type="text"
@@ -138,7 +138,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-muted-foreground">Email</span>
-          <div className="flex items-center gap-2 rounded-card border border-border/60 bg-muted/20 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 shadow-sm">
             <Mail className="h-4 w-4 text-primary" aria-hidden="true" />
             <input
               type="email"
@@ -152,7 +152,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-muted-foreground">Tanggal lahir</span>
-          <div className="flex items-center gap-2 rounded-card border border-border/60 bg-muted/20 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 shadow-sm">
             <Calendar className="h-4 w-4 text-primary" aria-hidden="true" />
             <input
               type="date"
@@ -165,14 +165,14 @@ export function ProfileForm({ loading }: ProfileFormProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-muted-foreground">Jenis kelamin</span>
-          <div className="flex items-center gap-2 rounded-card border border-border/60 bg-muted/20 px-3 py-2">
+          <div className="relative flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 pr-9 shadow-sm">
             <User className="h-4 w-4 rotate-90 text-primary" aria-hidden="true" />
             <select
               value={sex}
               onChange={(event) =>
                 setSex(event.target.value as typeof sex)
               }
-              className="w-full bg-transparent text-sm text-foreground outline-none"
+              className="w-full appearance-none bg-transparent text-sm text-foreground outline-none"
               disabled={isBusy}
             >
               <option value="">Pilih jenis kelamin</option>
@@ -180,16 +180,17 @@ export function ProfileForm({ loading }: ProfileFormProps) {
               <option value="male">Pria</option>
               <option value="unspecified">Tidak disebutkan</option>
             </select>
+            <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           </div>
         </label>
         <label className="flex flex-col gap-1 text-sm md:col-span-2">
           <span className="font-semibold text-muted-foreground">Golongan darah</span>
-          <div className="flex items-center gap-2 rounded-card border border-border/60 bg-muted/20 px-3 py-2">
+          <div className="relative flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 pr-9 shadow-sm">
             <Droplet className="h-4 w-4 text-primary" aria-hidden="true" />
             <select
               value={bloodType}
               onChange={(event) => setBloodType(event.target.value)}
-              className="w-full bg-transparent text-sm text-foreground outline-none"
+              className="w-full appearance-none bg-transparent text-sm text-foreground outline-none"
               disabled={isBusy}
             >
               <option value="">Pilih golongan darah</option>
@@ -206,11 +207,12 @@ export function ProfileForm({ loading }: ProfileFormProps) {
               <option value="O+">O+</option>
               <option value="O-">O-</option>
             </select>
+            <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           </div>
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-muted-foreground">Nomor telepon</span>
-          <div className="flex items-center gap-2 rounded-card border border-border/60 bg-muted/20 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-input border border-border/60 bg-background px-3 py-2 shadow-sm">
             <Phone className="h-4 w-4 text-primary" aria-hidden="true" />
             <input
               type="tel"
@@ -224,7 +226,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm md:col-span-2">
           <span className="font-semibold text-muted-foreground">Alamat lengkap</span>
-          <div className="flex items-start gap-2 rounded-card border border-border/60 bg-muted/20 px-3 py-2">
+          <div className="flex items-start gap-2 rounded-input border border-border/60 bg-background px-3 py-2 shadow-sm">
             <MapPin className="mt-1 h-4 w-4 text-primary" aria-hidden="true" />
             <textarea
               rows={3}
