@@ -12,6 +12,8 @@ export type ProfileSummary = {
   bloodType: string | null;
   phone: string | null;
   address: string | null;
+  heightCm: number | null;
+  weightKg: number | null;
 };
 
 export type AllergySeverity = "mild" | "moderate" | "severe";
@@ -43,6 +45,8 @@ type SnapshotApiResponse = {
     blood_type: string | null;
     phone: string | null;
     address: string | null;
+    height_cm: number | null;
+    weight_kg: number | null;
   } | null;
   allergies: Array<{
     id: number;
@@ -131,6 +135,8 @@ type ProfileState = {
     bloodType?: string | null;
     phone?: string | null;
     address?: string | null;
+    heightCm?: number | null;
+    weightKg?: number | null;
   }) => Promise<void>;
   addAllergy: (allergy: Allergy) => Promise<void>;
   updateAllergy: (allergy: Allergy) => Promise<void>;
@@ -165,6 +171,8 @@ const mapSnapshotResponse = (
         bloodType: payload.profile.blood_type,
         phone: payload.profile.phone,
         address: payload.profile.address,
+        heightCm: payload.profile.height_cm,
+        weightKg: payload.profile.weight_kg,
       }
     : null,
   allergies: payload.allergies.map((item) => ({

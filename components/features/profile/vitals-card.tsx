@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useProfileStore } from "./store";
 import { AnimatePresence, motion } from "framer-motion";
 import { Scale, Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,8 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
   const [isEditing, setIsEditing] = useState(false);
   const [heightCm, setHeightCm] = useState(initialHeightCm);
   const [weightKg, setWeightKg] = useState(initialWeightKg);
+  const updateProfile = useProfileStore((s) => s.updateProfile);
+  const storeLoading = useProfileStore((s) => s.loading);
 
   useEffect(() => {
     setHeightCm(initialHeightCm);
@@ -35,7 +38,7 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
   const displayWeight =
     unit === "metric" ? `${weightKg} kg` : `${(weightKg * 2.20462).toFixed(1)} lb`;
 
-  if (loading) {
+  if (loading || storeLoading) {
     return (
       <section className="rounded-card border border-border/60 bg-card p-5 shadow-sm">
         <div className="h-4 w-32 animate-pulse rounded bg-muted/50" />
@@ -99,9 +102,13 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
             className="mt-4 space-y-3"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              setIsEditing(false);
+              try {
+                await updateProfile({ heightCm, weightKg });
+              } finally {
+                setIsEditing(false);
+              }
             }}
           >
             <div className="grid gap-3 md:grid-cols-2">
