@@ -9,6 +9,7 @@ type CheckoutFormProps = {
   addresses: Address[];
   selectedAddressId: string;
   onSelectAddress: (addressId: string) => void;
+  onAddAddress?: () => void;
   deliveryOptions: DeliveryOption[];
   selectedDeliveryOptionId: string;
   onSelectDeliveryOption: (deliveryOptionId: string) => void;
@@ -29,6 +30,7 @@ export function CheckoutForm({
   addresses,
   selectedAddressId,
   onSelectAddress,
+  onAddAddress,
   deliveryOptions,
   selectedDeliveryOptionId,
   onSelectDeliveryOption,
@@ -49,6 +51,15 @@ export function CheckoutForm({
               Pilih lokasi pengantaran obat dan perangkat.
             </p>
           </div>
+          {onAddAddress ? (
+            <button
+              type="button"
+              onClick={onAddAddress}
+              className="tap-target rounded-button border border-border/70 bg-muted/20 px-3 py-2 text-xs font-medium text-foreground hover:border-primary/40 hover:bg-primary/5"
+            >
+              Tambah alamat
+            </button>
+          ) : null}
         </header>
         <div className="grid gap-3 md:grid-cols-2">
           {addresses.map((address) => {
