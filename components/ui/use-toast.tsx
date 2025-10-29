@@ -87,3 +87,5 @@ export const useToast = () => {
 };
 
 export type { ToastVariant };
+
+export default ToastProviderContext;

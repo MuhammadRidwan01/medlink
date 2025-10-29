@@ -1,11 +1,12 @@
 "use client";
 
-import { Bell, Menu } from "lucide-react";
+import { Bell, LogOut, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LogOut } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/auth/actions";
+import { useSession } from "@/hooks/use-session";
+import { getDashboardPath } from "@/lib/auth/role";
 type HeaderProps = {
   title?: string;
   className?: string;
@@ -16,6 +17,12 @@ type HeaderProps = {
 export function Header({ title, className, onMenuClick, children }: HeaderProps) {
   const pathname = usePathname();
   const isDoctorRoute = pathname?.startsWith("/doctor");
+  const { status, role } = useSession();
+  const isAuthenticated = status === "authenticated";
+  const dashboardHref = getDashboardPath(role);
+  const onDashboard = pathname === dashboardHref;
+  const isAuthRoute = pathname?.startsWith("/auth");
+  const showDashboardButton = isAuthenticated && !onDashboard;
 
   return (
     <header
@@ -49,24 +56,43 @@ export function Header({ title, className, onMenuClick, children }: HeaderProps)
       </Link>
       <div className="ml-auto flex items-center gap-2">
         {children}
-        <button
-          type="button"
-          className="interactive tap-target inline-flex items-center justify-center rounded-button border border-transparent bg-card text-muted-foreground shadow-sm transition-shadow hover:text-foreground"
-          aria-label="Notifikasi"
-        >
-          <Bell className="h-5 w-5" />
-        </button>
-        <form action={logoutAction}>
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm
+        {showDashboardButton ? (
+          <Link
+            href={dashboardHref}
+            className="tap-target inline-flex items-center gap-2 rounded-button border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition hover:border-primary/50 hover:bg-primary/15"
+          >
+            Dashboard
+          </Link>
+        ) : null}
+        {isAuthenticated ? (
+          <>
+            <button
+              type="button"
+              className="interactive tap-target inline-flex items-center justify-center rounded-button border border-transparent bg-card text-muted-foreground shadow-sm transition-shadow hover:text-foreground"
+              aria-label="Notifikasi"
+            >
+              <Bell className="h-5 w-5" />
+            </button>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm
                        bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700
                        ring-1 ring-slate-200 dark:ring-slate-700"
-            aria-label="Keluar"
+                aria-label="Keluar"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </form>
+          </>
+        ) : !isAuthRoute ? (
+          <Link
+            href="/auth/login"
+            className="tap-target inline-flex items-center justify-center rounded-button border border-border/70 bg-card/80 px-3 py-2 text-sm font-semibold text-foreground transition hover:border-border/80 hover:bg-card"
           >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </form>
+            Masuk
+          </Link>
+        ) : null}
       </div>
     </header>
   );

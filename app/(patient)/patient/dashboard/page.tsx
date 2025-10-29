@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cubicBezier, motion } from "framer-motion";
 import type { EasingFunction, Transition } from "framer-motion";
 import {
+  ArrowRight,
   ActivitySquare,
   Bell,
   CalendarCheck2,
@@ -41,6 +42,15 @@ type HighlightCard = {
   value: string;
   caption: string;
   tone?: "accent" | "neutral";
+};
+
+type HeroMetric = {
+  key: string;
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  helper: string;
+  tone: "accent" | "neutral";
 };
 
 type QuickAction = {
@@ -298,11 +308,11 @@ export default function PatientDashboardPage() {
     );
   }, []);
 
-  const highlightCards = useMemo<HighlightCard[]>(() => {
-    const followUpHref = nextAppointment
-      ? "#jadwalkan-followup"
-      : "/patient/followup/self";
+  const followUpHref = nextAppointment
+    ? "#jadwalkan-followup"
+    : "/patient/followup/self";
 
+  const highlightCards = useMemo<HighlightCard[]>(() => {
     return [
       {
         key: "notifications",
@@ -355,6 +365,7 @@ export default function PatientDashboardPage() {
     ];
   }, [
     activeOrderCount,
+    followUpHref,
     latestOrder,
     nextAppointment,
     nextAppointmentDate,
@@ -399,14 +410,136 @@ export default function PatientDashboardPage() {
     ];
   }, [doctorNote, latestOrder, prescriptions.length]);
 
+  const greetingName = useMemo(() => {
+    if (!profile?.name) {
+      return "teman MedLink";
+    }
+    const [first] = profile.name.split(" ");
+    return first || "teman MedLink";
+  }, [profile?.name]);
+
+  const triageAction = quickActions.find((action) => action.key === "triage");
+
+  const heroMetrics = useMemo<HeroMetric[]>(() => {
+    return [
+      {
+        key: "appointment",
+        icon: CalendarCheck2,
+        label: "Janji temu",
+        value: nextAppointmentDate
+          ? `${formatDateLabel(nextAppointmentDate)} - ${nextAppointment?.time} WIB`
+          : "Belum dijadwalkan",
+        helper: nextAppointmentDate
+          ? formatRelativeTime(nextAppointmentDate.toISOString())
+          : "Atur jadwal follow-up",
+        tone: nextAppointmentDate ? "neutral" : "accent",
+      },
+      {
+        key: "medication",
+        icon: Pill,
+        label: "Dosis berikutnya",
+        value: nextDose ? `${nextDose.time} WIB` : "Semua dosis tuntas",
+        helper: nextDose
+          ? `${nextDose.prescriptionName} - ${nextDose.segmentLabel}`
+          : "Tidak ada pengingat aktif",
+        tone: nextDose?.status === "due" ? "accent" : "neutral",
+      },
+      {
+        key: "notifications",
+        icon: Bell,
+        label: "Notifikasi",
+        value: unreadCount ? `${unreadCount} baru` : "Up to date",
+        helper: unreadCount
+          ? "Periksa pesan terbaru Anda"
+          : "Tidak ada tindakan mendesak",
+        tone: unreadCount ? "accent" : "neutral",
+      },
+    ];
+  }, [nextAppointment, nextAppointmentDate, nextDose, unreadCount]);
+
   return (
     <>
       <PageShell
         title="Ringkasan Pasien"
         subtitle="Navigasikan kontrol kesehatan Anda dalam satu tempat."
       >
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)]">
-          <div className="space-y-4">
+        <div className="space-y-6">
+          <section className="relative overflow-hidden rounded-[32px] border border-primary/40 bg-gradient-to-br from-primary/95 via-primary to-primary-dark px-6 py-8 text-white shadow-2xl">
+            <div className="absolute inset-0 opacity-70">
+              <div className="absolute left-[-10%] top-[-40%] h-48 w-48 rounded-full bg-white/25 blur-3xl" />
+              <div className="absolute right-[-15%] bottom-[-35%] h-64 w-64 rounded-full bg-white/20 blur-[120px]" />
+            </div>
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
+                  Ringkasan hari ini
+                </p>
+                <h1 className="text-3xl font-semibold sm:text-4xl">
+                  Halo, {greetingName}!
+                </h1>
+                <p className="max-w-xl text-sm text-white/80">
+                  Kami rangkum jadwal, pengingat obat, dan notifikasi terbaru supaya Anda fokus pada pemulihan.
+                </p>
+                {doctorNote ? (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-xs font-medium text-white/90 backdrop-blur">
+                    <MessageSquare className="h-4 w-4" />
+                    <span>{doctorNote.title}</span>
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {triageAction ? (
+                  <Link
+                    href={triageAction.href}
+                    className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-primary shadow-md transition hover:shadow-lg"
+                  >
+                    {triageAction.label}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                ) : null}
+                <Link
+                  href={followUpHref}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/60 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  {nextAppointment ? "Kelola follow-up" : "Jadwalkan follow-up"}
+                </Link>
+              </div>
+            </div>
+            <div className="relative mt-6 grid gap-4 sm:grid-cols-3">
+              {heroMetrics.map((metric) => (
+                <motion.div
+                  key={metric.key}
+                  whileHover={cardMotion.whileHover}
+                  whileTap={cardMotion.whileTap}
+                  transition={cardMotion.transition}
+                >
+                  <div
+                    className={[
+                      "group h-full rounded-[22px] border px-4 py-4 backdrop-blur transition",
+                      metric.tone === "accent"
+                        ? "border-white/40 bg-white/25 shadow-lg shadow-white/20"
+                        : "border-white/25 bg-white/15",
+                    ].join(" ")}
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white">
+                      <metric.icon className="h-4 w-4" />
+                    </span>
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
+                      {metric.label}
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-white">
+                      {metric.value}
+                    </p>
+                    <p className="mt-1 text-sm text-white/80">
+                      {metric.helper}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)]">
+            <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             {highlightCards.map((card) => (
               <motion.div
@@ -540,7 +673,7 @@ export default function PatientDashboardPage() {
                   {upcomingDoses.map((dose) => (
                     <li
                       key={buildDoseKey(dose.prescriptionId, dose.id)}
-                      className="flex items-center justify-between gap-3 rounded-card border border-border/50 bg-muted/30 px-3 py-2"
+                      className="flex items-start justify-between gap-3 rounded-card border border-border/50 bg-muted/30 px-3 py-3"
                     >
                       <div>
                         <p className="text-sm font-semibold text-foreground">
@@ -552,13 +685,21 @@ export default function PatientDashboardPage() {
                       </div>
                       <span
                         className={[
-                          "text-tiny font-semibold",
+                          "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold",
                           dose.status === "due"
-                            ? "text-primary"
-                            : "text-muted-foreground",
+                            ? "bg-primary/20 text-primary"
+                            : "bg-muted/60 text-muted-foreground",
                         ].join(" ")}
                       >
-                        {dose.status === "due" ? "Sekarang" : "Mendatang"}
+                        <span
+                          className={[
+                            "h-1.5 w-1.5 rounded-full",
+                            dose.status === "due"
+                              ? "bg-primary"
+                              : "bg-muted-foreground/50",
+                          ].join(" ")}
+                        />
+                        {dose.status === "due" ? "Segera konsumsi" : "Mendatang"}
                       </span>
                     </li>
                   ))}
@@ -750,6 +891,7 @@ export default function PatientDashboardPage() {
             )}
           </section>
           </div>
+        </div>
         </div>
       </PageShell>
     </>

@@ -11,6 +11,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/features/theme/theme-toggle";
+import { LandingHeroActions, LandingNavActions } from "@/components/features/landing/auth-actions";
 
 const heroHighlights = [
   {
@@ -131,19 +132,7 @@ export default function Home() {
         </nav>
         <div className="flex flex-1 items-center justify-end gap-3">
           <ThemeToggle />
-          <Link
-            href="/auth/login"
-            className="hidden items-center rounded-full border border-border/70 px-4 py-2 text-sm font-semibold text-foreground transition hover:border-border hover:bg-card/80 sm:inline-flex"
-          >
-            Masuk
-          </Link>
-          <Link
-            href="/auth/register"
-            className="inline-flex items-center gap-2 rounded-full bg-primary-gradient px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl"
-          >
-            Mulai Gratis
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
+          <LandingNavActions />
         </div>
       </header>
 
@@ -172,12 +161,7 @@ export default function Home() {
                 Lihat kemampuan utama
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
-              <Link
-                href="/auth/login?redirect=/patient/dashboard"
-                className="inline-flex items-center gap-2 rounded-full border border-border/80 px-6 py-3 text-sm font-semibold text-foreground transition hover:border-border hover:bg-card"
-              >
-                Masuk sebagai pasien
-              </Link>
+              <LandingHeroActions />
               <span className="text-sm text-muted-foreground">14 hari gratis. Tidak perlu kartu kredit.</span>
             </div>
             <div className="grid gap-5 sm:grid-cols-3">
