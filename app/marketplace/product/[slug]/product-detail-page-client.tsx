@@ -11,7 +11,8 @@ import { InventoryBadge } from "@/components/features/marketplace/inventory-badg
 import { RatingStars } from "@/components/features/marketplace/rating-stars";
 import { CartSheet } from "@/components/features/marketplace/cart/cart-sheet";
 import { CartTrigger } from "@/components/features/marketplace/cart/cart-trigger";
-import { MOCK_PRODUCTS } from "@/components/features/marketplace/data";
+import { useState, useEffect, useMemo } from "react";
+import type { MarketplaceProduct } from "@/components/features/marketplace/data";
 import { useMarketplaceCart, useMarketplaceSafety } from "@/components/features/marketplace/store";
 
 type ProductDetailPageClientProps = {
@@ -21,7 +22,35 @@ type ProductDetailPageClientProps = {
 export function ProductDetailPageClient({
   slug,
 }: ProductDetailPageClientProps) {
-  const product = MOCK_PRODUCTS.find((item) => item.slug === slug);
+  const [product, setProduct] = useState<MarketplaceProduct | null>(null);
+  const [related, setRelated] = useState<MarketplaceProduct[]>([]);
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      try {
+        const res = await fetch(`/api/marketplace/products/${encodeURIComponent(slug)}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(String(res.status));
+        const { product } = (await res.json()) as { product: MarketplaceProduct };
+        if (!active) return;
+        setProduct(product);
+        // fetch all to compute related (simple client filter)
+        const resAll = await fetch(`/api/marketplace/products`, { cache: "no-store" });
+        if (resAll.ok) {
+          const payload = (await resAll.json()) as { products: MarketplaceProduct[] };
+          const rel = payload.products
+            .filter((p) => p.id !== product.id && p.categories.some((c) => product.categories.includes(c)))
+            .slice(0, 4);
+          if (active) setRelated(rel);
+        }
+      } catch (e) {
+        console.error("[marketplace] failed to load product detail", e);
+      }
+    }
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [slug]);
   const addItem = useMarketplaceCart((state) => state.addItem);
   const toggleCart = useMarketplaceCart((state) => state.toggle);
   const warningEntry = useMarketplaceSafety((state) =>
@@ -157,11 +186,11 @@ export function ProductDetailPageClient({
         </aside>
       </div>
 
-      {relatedProducts.length ? (
+      {related.length ? (
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Produk serupa</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {relatedProducts.map((related) => (
+            {related.map((related) => (
               <Link
                 key={related.id}
                 href={`/marketplace/product/${related.slug}`}

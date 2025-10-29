@@ -23,7 +23,7 @@ export default function RootLayout({
           <main id="main-content">
             {children}
           </main>
-          {/* Global command palette (opens with Cmd/Ctrl+K or K) */}
+          {/* Global command palette (opens with Ctrl+K) */}
           <GlobalCommandPalette />
           {/* Client bootstrap to apply mock seeds and demo flags */}
           <SeedBootstrap />

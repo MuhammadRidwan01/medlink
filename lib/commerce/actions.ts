@@ -50,7 +50,7 @@ export async function checkoutAction(payload: CheckoutPayload): Promise<Checkout
 
   const slugs = sanitizedItems.map((item) => item.slug);
   const { data: products, error: productError } = await supabase
-    .from('commerce.products')
+    .from('marketplace_products')
     .select('id, slug, price')
     .in('slug', slugs);
 
@@ -67,152 +67,27 @@ export async function checkoutAction(payload: CheckoutPayload): Promise<Checkout
   const normalizedChannel = payload.channel ? String(payload.channel) : null;
   const normalizedSnapToken = payload.snapToken ? String(payload.snapToken) : null;
 
-  let cartId: string | null = null;
-  let orderId: string | null = null;
-  let paymentId: string | null = null;
+  // Call RPC to create order, order_items, payment (and optional cart entries) server-side in DB
+  const payloadForRpc = {
+    items: sanitizedItems,
+    channel: normalizedChannel,
+    snap_token: normalizedSnapToken,
+  } as const;
 
-  try {
-    const { data: cart, error: cartError } = await supabase
-      .from('commerce.carts')
-      .insert({ user_id: user.id })
-      .select('id')
-      .single();
+  const { data: result, error: rpcError } = await supabase.rpc('create_order_from_items', {
+    p_payload: payloadForRpc as any,
+  });
 
-    if (cartError) {
-      throw cartError;
-    }
-
-    cartId = cart.id;
-
-    if (!cartId || !isValidUUID(cartId)) {
-      throw new Error('Gagal membuat keranjang.');
-    }
-
-    const cartItemsPayload = sanitizedItems.map((item) => {
-      const product = productBySlug.get(item.slug);
-      if (!product) {
-        throw new Error(`Produk ${item.slug} tidak ditemukan.`);
-      }
-      return {
-        cart_id: cartId,
-        product_id: product.id,
-        qty: item.quantity,
-      };
-    });
-
-    const { error: cartItemsError } = await supabase
-      .from('commerce.cart_items')
-      .insert(cartItemsPayload);
-    if (cartItemsError) {
-      throw cartItemsError;
-    }
-
-    const total = sanitizedItems.reduce((sum, item) => {
-      const product = productBySlug.get(item.slug);
-      const rawPrice = product?.price ?? 0;
-      const numericPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice));
-      return sum + numericPrice * item.quantity;
-    }, 0);
-
-    const { data: createdOrder, error: orderError } = await supabase
-      .from('commerce.orders')
-      .insert({
-        user_id: user.id,
-        total,
-        status: 'pending',
-      })
-      .select('id')
-      .single();
-
-    if (orderError) {
-      throw orderError;
-    }
-
-    orderId = createdOrder.id;
-
-    if (!orderId || !isValidUUID(orderId)) {
-      throw new Error('Gagal membuat pesanan baru.');
-    }
-
-    const orderItemsPayload = sanitizedItems.map((item) => {
-      const product = productBySlug.get(item.slug);
-      if (!product) {
-        throw new Error(`Produk ${item.slug} tidak ditemukan.`);
-      }
-
-      return {
-        order_id: orderId,
-        product_id: product.id,
-        qty: item.quantity,
-        price: product.price,
-      };
-    });
-
-    const { error: orderItemsError } = await supabase
-      .from('commerce.order_items')
-      .insert(orderItemsPayload);
-    if (orderItemsError) {
-      throw orderItemsError;
-    }
-
-    const { data: payment, error: paymentError } = await supabase
-      .from('commerce.payments')
-      .insert({
-        user_id: user.id,
-        order_id: orderId,
-        status: 'pending',
-        channel: normalizedChannel,
-        snap_token: normalizedSnapToken,
-      })
-      .select('id')
-      .single();
-
-    if (paymentError) {
-      throw paymentError;
-    }
-
-    paymentId = payment.id;
-
-    if (!paymentId || !isValidUUID(paymentId)) {
-      throw new Error('Gagal membuat transaksi pembayaran.');
-    }
-
-    return { orderId, paymentId };
-  } catch (error) {
-    if (orderId && isValidUUID(orderId)) {
-      const { error: delOrderItemsError } = await supabase
-        .from('commerce.order_items')
-        .delete()
-        .eq('order_id', orderId);
-      if (delOrderItemsError) {
-        console.error('[checkoutAction] failed to cleanup order_items', delOrderItemsError);
-      }
-      const { error: delOrderError } = await supabase
-        .from('commerce.orders')
-        .delete()
-        .eq('id', orderId);
-      if (delOrderError) {
-        console.error('[checkoutAction] failed to cleanup orders', delOrderError);
-      }
-    }
-
-    if (cartId && isValidUUID(cartId)) {
-      const { error: delCartItemsError } = await supabase
-        .from('commerce.cart_items')
-        .delete()
-        .eq('cart_id', cartId);
-      if (delCartItemsError) {
-        console.error('[checkoutAction] failed to cleanup cart_items', delCartItemsError);
-      }
-      const { error: delCartError } = await supabase
-        .from('commerce.carts')
-        .delete()
-        .eq('id', cartId);
-      if (delCartError) {
-        console.error('[checkoutAction] failed to cleanup carts', delCartError);
-      }
-    }
-
-    throw error instanceof Error ? error : new Error('Checkout gagal. Silakan coba lagi.');
+  if (rpcError) {
+    throw rpcError;
   }
+
+  const orderId = (result as any)?.order_id as string | undefined;
+  const paymentId = (result as any)?.payment_id as string | undefined;
+
+  if (!orderId || !paymentId) {
+    throw new Error('Checkout gagal di sisi server.');
+  }
+
+  return { orderId, paymentId };
 }

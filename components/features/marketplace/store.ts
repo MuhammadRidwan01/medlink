@@ -105,17 +105,15 @@ export const useMarketplaceStore = create<MarketplaceState>()(
   })),
 );
 
-export type CartItem = {
-  product: MarketplaceProduct;
-  quantity: number;
-};
+export type CartItem = { product: MarketplaceProduct; quantity: number };
 
 type CartState = {
   items: CartItem[];
   isOpen: boolean;
-  addItem: (product: MarketplaceProduct) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addItem: (product: MarketplaceProduct) => Promise<void>;
+  removeItem: (productId: string) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number) => Promise<void>;
+  load: () => Promise<void>;
   toggle: (open?: boolean) => void;
   subtotal: () => number;
 };
@@ -124,43 +122,76 @@ export const useMarketplaceCart = create<CartState>()(
   devtools((set, get) => ({
     items: [],
     isOpen: false,
-    addItem: (product) => {
-      set((state) => {
-        const existing = state.items.find((item) => item.product.id === product.id);
-        if (existing) {
-          const items = state.items.map((item) =>
-            item.product.id === product.id
-              ? { ...item, quantity: item.quantity + 1 }
-              : item,
-          );
-          return { items, isOpen: true };
+    async load() {
+      try {
+        const res = await fetch("/api/marketplace/cart", { cache: "no-store" });
+        if (!res.ok) {
+          if (res.status === 401) {
+            set({ items: [] });
+            return;
+          }
+          throw new Error(String(res.status));
         }
-        return { items: [...state.items, { product, quantity: 1 }], isOpen: true };
-      });
+        const json = (await res.json()) as { items: CartItem[] };
+        set({ items: json.items ?? [] });
+      } catch (e) {
+        console.error("[cart] load failed", e);
+      }
     },
-    removeItem: (productId) => {
-      set((state) => ({ items: state.items.filter((item) => item.product.id !== productId) }));
+    async addItem(product) {
+      try {
+        const res = await fetch("/api/marketplace/cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: product.id, qty: 1 }),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        const json = (await res.json()) as { items: CartItem[] };
+        set({ items: json.items ?? [] });
+        set({ isOpen: true });
+      } catch (e) {
+        console.error("[cart] add item failed", e);
+      }
     },
-    updateQuantity: (productId, quantity) => {
-      set((state) => ({
-        items: state.items
-          .map((item) =>
-            item.product.id === productId
-              ? { ...item, quantity: Math.max(1, Math.min(quantity, 10)) }
-              : item,
-          )
-          .filter((item) => item.quantity > 0),
-      }));
+    async removeItem(productId) {
+      try {
+        const url = new URL("/api/marketplace/cart", window.location.origin);
+        url.searchParams.set("productId", productId);
+        const res = await fetch(url.toString(), { method: "DELETE" });
+        if (!res.ok) throw new Error(String(res.status));
+        const json = (await res.json()) as { items: CartItem[] };
+        set({ items: json.items ?? [] });
+      } catch (e) {
+        console.error("[cart] remove item failed", e);
+      }
+    },
+    async updateQuantity(productId, quantity) {
+      try {
+        const res = await fetch("/api/marketplace/cart", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId, qty: quantity }),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        const json = (await res.json()) as { items: CartItem[] };
+        set({ items: json.items ?? [] });
+      } catch (e) {
+        console.error("[cart] update qty failed", e);
+      }
     },
     toggle: (open) => {
       if (typeof open === "boolean") {
         set({ isOpen: open });
+        if (open) void get().load();
       } else {
-        set((state) => ({ isOpen: !state.isOpen }));
+        set((state) => {
+          const next = !state.isOpen;
+          if (next) void get().load();
+          return { isOpen: next };
+        });
       }
     },
-    subtotal: () =>
-      get().items.reduce((total, item) => total + item.product.price * item.quantity, 0),
+    subtotal: () => get().items.reduce((t, it) => t + it.product.price * it.quantity, 0),
   })),
 );
 
@@ -299,4 +330,4 @@ export const useMarketplaceSafety = create<SafetyState>()(
   })),
 );
 
-export { MOCK_PRODUCTS } from "./data";
+// No longer re-export MOCK_PRODUCTS for production cart usage

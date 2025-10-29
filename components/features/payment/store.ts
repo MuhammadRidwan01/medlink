@@ -3,7 +3,6 @@
 import { create } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
 import { checkoutAction } from "@/lib/commerce/actions";
-import { MOCK_PRODUCTS } from "@/components/features/marketplace/data";
 import {
   BASE_DISCOUNT,
   DELIVERY_OPTIONS,
@@ -66,8 +65,7 @@ type PaymentStore = {
   resetOrder: (orderId: string) => void;
 };
 
-const PRODUCT_SLUG_LOOKUP = new Map(MOCK_PRODUCTS.map((product) => [product.id, product.slug]));
-const PRODUCT_BY_SLUG = new Map(MOCK_PRODUCTS.map((product) => [product.slug, product]));
+// Checkout flow now receives items from cart mapping directly, no mock resolution here.
 
 const storage = typeof window !== "undefined"
   ? createJSONStorage<Partial<PaymentStore>>(() => window.sessionStorage)
@@ -76,7 +74,7 @@ const storage = typeof window !== "undefined"
 export const usePaymentStore = create<PaymentStore>()(
   devtools(
     persist(
-      (set) => ({
+      (set, get) => ({
         checkoutItems: MOCK_CHECKOUT_ITEMS,
         addresses: MOCK_ADDRESSES,
         deliveryOptions: DELIVERY_OPTIONS,
@@ -84,6 +82,10 @@ export const usePaymentStore = create<PaymentStore>()(
         orders: {},
         developerOutcome: "success",
         setDeveloperOutcome: (outcome) => set(() => ({ developerOutcome: outcome })),
+        // helper: allow setting items from marketplace cart
+        // (augment type without changing interface)
+        // @ts-expect-error dynamic assignment allowed in app code
+        setCheckoutItems: (items: CheckoutItem[]) => set(() => ({ checkoutItems: items })),
         createOrder: async ({ addressId, deliveryOptionId, name, email, phone, notes }) => {
           const option =
             DELIVERY_OPTIONS.find((item) => item.id === deliveryOptionId) ?? DELIVERY_OPTIONS[0];
@@ -91,21 +93,12 @@ export const usePaymentStore = create<PaymentStore>()(
           const shipping = option.cost;
           const timestamp = new Date().toISOString();
 
-          const resolvedItems = MOCK_CHECKOUT_ITEMS.map((item) => {
-            const slug =
-              item.slug ??
-              (item.productId ? PRODUCT_SLUG_LOOKUP.get(item.productId) : PRODUCT_SLUG_LOOKUP.get(item.id));
-            if (!slug) {
+          const sourceItems = get().checkoutItems;
+          const resolvedItems = sourceItems.map((item) => {
+            if (!item.slug || item.slug.trim().length === 0) {
               throw new Error(`Produk ${item.name} belum memiliki slug untuk diproses.`);
             }
-            const product = PRODUCT_BY_SLUG.get(slug);
-            const price = product?.price ?? item.price;
-            return {
-              ...item,
-              slug,
-              name: product?.name ?? item.name,
-              price,
-            };
+            return item;
           });
 
           const subtotal = resolvedItems.reduce(
