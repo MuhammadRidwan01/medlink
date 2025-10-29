@@ -839,7 +839,7 @@ return (
         </div>
       </div>
 
-      <div className="space-y-4 lg:pl-0">
+      <div className="space-y-4 lg:pl-0 lg:sticky lg:top-24 lg:self-start">
         <SymptomSummary summary={summary} loading={!isHydrated} className="" />
         {showFinalPanel ? (
           <motion.div
