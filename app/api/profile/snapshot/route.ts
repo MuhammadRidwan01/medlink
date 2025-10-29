@@ -11,6 +11,8 @@ type SnapshotProfile = {
   blood_type: string | null;
   phone: string | null;
   address: string | null;
+  height_cm: number | null;
+  weight_kg: number | null;
 };
 
 type SnapshotAllergy = {
@@ -87,6 +89,8 @@ type ProfileUpsertBody = {
     bloodType?: string | null;
     phone?: string | null;
     address?: string | null;
+    heightCm?: number | null;
+    weightKg?: number | null;
   };
 };
 
@@ -260,6 +264,8 @@ export async function GET() {
     blood_type: null,
     phone: (user.user_metadata?.phone as string | undefined) ?? null,
     address: null,
+    height_cm: null,
+    weight_kg: null,
   });
 
   return NextResponse.json(snapshot);
@@ -452,6 +458,32 @@ export async function POST(request: NextRequest) {
 
       if (record.address !== undefined) {
         payload.address = record.address?.trim() ?? null;
+      }
+
+      if (record.heightCm !== undefined) {
+        const h = record.heightCm;
+        if (h === null || h === undefined || Number.isNaN(Number(h))) {
+          payload.height_cm = null;
+        } else {
+          const hv = Number(h);
+          if (hv < 30 || hv > 250) {
+            return NextResponse.json({ message: 'Tinggi tidak masuk akal' }, { status: 400 });
+          }
+          payload.height_cm = hv;
+        }
+      }
+
+      if (record.weightKg !== undefined) {
+        const w = record.weightKg;
+        if (w === null || w === undefined || Number.isNaN(Number(w))) {
+          payload.weight_kg = null;
+        } else {
+          const wv = Number(w);
+          if (wv < 20 || wv > 300) {
+            return NextResponse.json({ message: 'Berat tidak masuk akal' }, { status: 400 });
+          }
+          payload.weight_kg = wv;
+        }
       }
 
       await supabase

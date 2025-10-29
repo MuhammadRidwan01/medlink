@@ -80,6 +80,7 @@ export function ProfileForm({ loading }: ProfileFormProps) {
           <h2 className="text-sm font-semibold text-foreground">Informasi profil</h2>
           <p className="text-xs text-muted-foreground">
             Data berikut tersimpan di Supabase dan digunakan lintas layanan MedLink.
+            Termasuk tinggi dan berat di bagian Tanda Vital.
           </p>
         </div>
         <button
