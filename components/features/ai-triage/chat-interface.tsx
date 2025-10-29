@@ -632,6 +632,28 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
     [handleSendMessage],
   );
 
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (isStreaming || sessionStatus === "completed") {
+        return;
+      }
+      if (event.target && event.target instanceof HTMLElement) {
+        const tag = event.target.tagName.toLowerCase();
+        if (tag === "textarea" || tag === "input" || event.target.isContentEditable) {
+          return;
+        }
+      }
+      const digit = Number.parseInt(event.key, 10);
+      if (!Number.isNaN(digit) && digit >= 1 && digit <= quickReplies.length) {
+        event.preventDefault();
+        const option = quickReplies[digit - 1];
+        handleQuickReply(option);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleQuickReply, isStreaming, quickReplies, sessionStatus]);
+
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const viewport = event.currentTarget;
     const distanceFromBottom =
