@@ -1,23 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const variantClassMap = {
-  primary:
-    "border-primary/40 bg-gradient-to-br from-primary/15 via-primary/10 to-transparent text-primary shadow-sm hover:border-primary/60 hover:from-primary/20 hover:via-primary/10",
-  outline:
-    "border-border/60 bg-card text-foreground shadow-sm hover:border-primary/40 hover:text-primary",
-  quiet:
-    "border-transparent bg-transparent text-muted-foreground hover:text-primary hover:bg-primary/5",
+  primary: "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15",
+  outline: "border-border bg-card text-foreground hover:border-primary/40",
+  quiet: "border-transparent bg-transparent text-muted-foreground hover:bg-muted/40",
 } as const;
 
 export type QuickReply = {
   id: string;
   label: string;
   variant?: keyof typeof variantClassMap;
-  icon?: LucideIcon;
   description?: string;
   hotkey?: string;
 };
@@ -73,8 +68,7 @@ export function QuickReplies({ options, onSelect, disabled }: QuickRepliesProps)
       {options.map((option, index) => {
         const variant = option.variant ?? "primary";
         const baseClass =
-          "interactive tap-target flex min-w-[180px] flex-1 flex-col gap-1 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:flex-none";
-        const Icon = option.icon;
+          "interactive tap-target inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
         return (
           <button
             key={option.id}
@@ -94,22 +88,7 @@ export function QuickReplies({ options, onSelect, disabled }: QuickRepliesProps)
             )}
             aria-label={`Kirim jawaban cepat ${option.label}`}
           >
-            <span className="flex items-center gap-2">
-              {Icon ? (
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-background/60">
-                  <Icon className="h-4 w-4" aria-hidden />
-                </span>
-              ) : null}
-              <span className="flex-1 text-sm font-semibold">{option.label}</span>
-              {option.hotkey ? (
-                <kbd className="ml-auto rounded-md border border-border bg-background px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                  {option.hotkey}
-                </kbd>
-              ) : null}
-            </span>
-            {option.description ? (
-              <span className="pl-10 text-xs font-normal text-muted-foreground">{option.description}</span>
-            ) : null}
+            {option.label}
           </button>
         );
       })}

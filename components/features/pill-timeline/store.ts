@@ -14,6 +14,9 @@ type Prescription = {
   id: string;
   name: string;
   description: string;
+  status: string;
+  createdAt: string;
+  createdLabel: string;
   segments: TimelineSegment[];
   doses: DoseEntry[];
   reminder: ReminderConfig;
@@ -35,9 +38,12 @@ type PillTimelineState = {
 
 const initialPrescriptions: Prescription[] = [
   {
-    id: "rx-metformin",
-    name: "Metformin",
-    description: "500 mg • 2x sehari setelah makan",
+    id: "rx-diabetes-regimen",
+    name: "Regimen Diabetes Tipe 2",
+    description: "Metformin 500 mg & Acarbose 50 mg",
+    status: "approved",
+    createdAt: "2025-02-01T09:15:00Z",
+    createdLabel: "1 Feb 2025",
     reminder: {
       time: "06:30",
       offsetMinutes: 0,
@@ -50,7 +56,7 @@ const initialPrescriptions: Prescription[] = [
     ],
     doses: [
       {
-        id: "met-1",
+        id: "metformin-morning",
         segmentId: "morning",
         time: "06:30",
         medication: "Metformin",
@@ -58,7 +64,15 @@ const initialPrescriptions: Prescription[] = [
         status: "due",
       },
       {
-        id: "met-2",
+        id: "acarbose-morning",
+        segmentId: "morning",
+        time: "07:30",
+        medication: "Acarbose",
+        strength: "50 mg",
+        status: "soon",
+      },
+      {
+        id: "metformin-evening",
         segmentId: "evening",
         time: "18:30",
         medication: "Metformin",
@@ -68,11 +82,14 @@ const initialPrescriptions: Prescription[] = [
     ],
   },
   {
-    id: "rx-atorvastatin",
-    name: "Atorvastatin",
-    description: "20 mg • 1x sehari sebelum tidur",
+    id: "rx-hipertensi-kardioproteksi",
+    name: "Terapi Hipertensi & Kardioproteksi",
+    description: "Candesartan 8 mg & Atorvastatin 20 mg",
+    status: "awaiting_approval",
+    createdAt: "2025-01-22T14:30:00Z",
+    createdLabel: "22 Jan 2025",
     reminder: {
-      time: "21:00",
+      time: "07:00",
       offsetMinutes: 0,
     },
     segments: [
@@ -83,7 +100,15 @@ const initialPrescriptions: Prescription[] = [
     ],
     doses: [
       {
-        id: "ator-1",
+        id: "candesartan-morning",
+        segmentId: "morning",
+        time: "07:00",
+        medication: "Candesartan",
+        strength: "8 mg",
+        status: "due",
+      },
+      {
+        id: "atorvastatin-night",
         segmentId: "night",
         time: "21:30",
         medication: "Atorvastatin",

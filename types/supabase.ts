@@ -798,6 +798,74 @@ export type Database = {
         }
         Relationships: []
       }
+      triage_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "triage_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "triage_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      triage_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          patient_id: string
+          risk_level: string | null
+          status: string
+          summary: Json
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          patient_id: string
+          risk_level?: string | null
+          status: string
+          summary: Json
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          patient_id?: string
+          risk_level?: string | null
+          status?: string
+          summary?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       marketplace_products: {

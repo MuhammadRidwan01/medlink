@@ -2,9 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, AlertTriangle, ArrowDown, X } from "lucide-react";
-import { useMarketplaceCart } from "@/components/features/marketplace/store";
-import { createClient } from "@/lib/supabase/client";
+import {
+  Send,
+  AlertTriangle,
+  ArrowDown,
+  X,
+  ShieldCheck,
+  CircleAlert,
+  Flame,
+  BellRing,
+  RefreshCw,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { PrescriptionBubble } from "./prescription-bubble";
 import { cn } from "@/lib/utils";
 import { ChatMessage, type ChatMessageProps } from "./chat-message";
@@ -78,38 +88,10 @@ type ChatInterfaceProps = {
 };
 
 const quickReplyPresets: QuickReply[] = [
-  {
-    id: "qr-1",
-    label: "Demam & menggigil",
-    description: "Sampaikan suhu tubuh dan durasinya",
-    variant: "primary",
-    icon: Thermometer,
-    hotkey: "1",
-  },
-  {
-    id: "qr-2",
-    label: "Nyeri dada",
-    description: "Rasa sesak atau tekanan di dada",
-    variant: "outline",
-    icon: HeartPulse,
-    hotkey: "2",
-  },
-  {
-    id: "qr-3",
-    label: "Sulit bernapas",
-    description: "Nafas pendek atau berbunyi",
-    variant: "primary",
-    icon: Wind,
-    hotkey: "3",
-  },
-  {
-    id: "qr-4",
-    label: "Sakit kepala hebat",
-    description: "Rasa berdenyut atau disertai mual",
-    variant: "quiet",
-    icon: Brain,
-    hotkey: "4",
-  },
+  { id: "qr-1", label: "Saya demam", variant: "primary" },
+  { id: "qr-2", label: "Nyeri dada", variant: "outline" },
+  { id: "qr-3", label: "Sulit bernapas", variant: "primary" },
+  { id: "qr-4", label: "Gejala lainnya", variant: "quiet" },
 ];
 
 type RiskTheme = {
