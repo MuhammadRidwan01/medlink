@@ -5,6 +5,8 @@ import Image from "next/image";
 import { AnimatePresence, cubicBezier, motion } from "framer-motion";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { usePaymentStore } from "@/components/features/payment/store";
 import { InteractionHint } from "@/components/features/marketplace/interaction-hint";
 import { useMarketplaceCart, useMarketplaceSafety } from "@/components/features/marketplace/store";
 import { cn } from "@/lib/utils";
@@ -14,6 +16,9 @@ export function CartSheet() {
   const { isOpen, items, toggle, updateQuantity, removeItem, subtotal } = useMarketplaceCart();
   const warningsMap = useMarketplaceSafety((state) => state.warnings);
   const fetchConflicts = useMarketplaceSafety((state) => state.fetchConflicts);
+  const router = useRouter();
+  // @ts-expect-error store has dynamic setter added
+  const setCheckoutItems = usePaymentStore((state: any) => state.setCheckoutItems);
 
   useEffect(() => {
     if (items.length) {
@@ -128,7 +133,23 @@ export function CartSheet() {
               "tap-target mt-3 inline-flex w-full items-center justify-center rounded-button bg-primary-gradient px-4 py-2 text-sm font-semibold text-primary-foreground shadow-md transition duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               items.length === 0 && "cursor-not-allowed opacity-60",
             )}
-          >
+              onClick={() => {
+                if (!items.length) return;
+                const mapped = items.map((it) => ({
+                  id: it.product.id,
+                  productId: it.product.id,
+                  slug: it.product.slug,
+                  name: it.product.name,
+                  detail: it.product.shortDescription,
+                  quantity: it.quantity,
+                  price: it.product.price,
+                  imageUrl: it.product.imageUrl,
+                }));
+                setCheckoutItems(mapped);
+                toggle(false);
+                router.push("/patient/checkout");
+              }}
+            >
             Lanjutkan ke checkout
           </button>
         </footer>

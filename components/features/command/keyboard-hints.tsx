@@ -9,7 +9,7 @@ export function KeyboardHints() {
         <Hint k="Esc" label="Close" />
       </div>
       <div className="flex items-center gap-3">
-        <Hint k="⌘K / Ctrl K" label="Open" />
+        <Hint k="Ctrl K" label="Open" />
       </div>
     </div>
   );

@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  MOCK_PRODUCTS,
-  PATIENT_CONTEXT,
-  type MarketplaceProduct,
-} from "@/components/features/marketplace/data";
+import { PATIENT_CONTEXT, type MarketplaceProduct } from "@/components/features/marketplace/data";
 import type { ProductContraindication } from "@/components/features/marketplace/data";
 import type {
   MarketplaceSafetyResult,
@@ -19,11 +15,42 @@ const normalize = (value: string) =>
     .trim()
     .toLowerCase();
 
-function resolveProduct(identifier: string): MarketplaceProduct | undefined {
-  return (
-    MOCK_PRODUCTS.find((product) => product.id === identifier) ??
-    MOCK_PRODUCTS.find((product) => product.slug === identifier)
-  );
+async function fetchProductsByIdentifiers(supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>, identifiers: string[]): Promise<Record<string, MarketplaceProduct>> {
+  if (identifiers.length === 0) return {};
+  const { data, error } = await supabase
+    .from("marketplace_products")
+    .select(
+      "id, slug, name, short_description, long_description, price, image_url, categories, tags, rating, rating_count, inventory_status, badges, contraindications",
+    )
+    .in("id", identifiers);
+  if (error) {
+    console.error("[safety] failed to load products", error);
+    return {};
+  }
+  const map: Record<string, MarketplaceProduct> = {};
+  for (const row of data ?? []) {
+    const product: MarketplaceProduct = {
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      shortDescription: row.short_description ?? "",
+      longDescription: row.long_description ?? "",
+      price: Number(row.price ?? 0) || 0,
+      imageUrl: row.image_url ?? "",
+      categories: (row.categories as string[] | null) ?? [],
+      tags: (row.tags as string[] | null) ?? [],
+      rating: Number(row.rating ?? 0) || 0,
+      ratingCount: (row.rating_count as number | null) ?? 0,
+      inventoryStatus: ((row.inventory_status as string | null) ?? "in-stock") as any,
+      badges: (row.badges as string[] | null) ?? undefined,
+      contraindications: Array.isArray(row.contraindications)
+        ? (row.contraindications as any[])
+        : (() => { try { return JSON.parse(String(row.contraindications ?? "[]")); } catch { return undefined; } })(),
+    };
+    map[product.id] = product;
+    map[product.slug] = product;
+  }
+  return map;
 }
 
 function buildDefaultMessage(ci: ProductContraindication) {
@@ -113,12 +140,14 @@ export async function POST(request: Request) {
   const productIds = productIdsValue as string[];
   const uniqueIds = [...new Set(productIds)];
 
+  const supabase = await getSupabaseServerClient();
   const snapshot = await fetchSnapshot();
+  const productMap = await fetchProductsByIdentifiers(supabase, uniqueIds);
   const allergySet = new Set(snapshot.allergies.map(normalize));
   const medicationSet = new Set(snapshot.medications.map(normalize));
 
   const conflicts: MarketplaceSafetyResult[] = uniqueIds.map((identifier) => {
-    const product = resolveProduct(identifier);
+    const product = productMap[identifier];
     if (!product) {
       return {
         productId: identifier,
@@ -152,8 +181,5 @@ export async function POST(request: Request) {
     };
   });
 
-  return NextResponse.json({
-    snapshot,
-    conflicts,
-  });
+  return NextResponse.json({ snapshot, conflicts });
 }

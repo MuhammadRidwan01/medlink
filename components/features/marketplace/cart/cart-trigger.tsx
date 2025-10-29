@@ -12,9 +12,11 @@ type CartTriggerProps = {
 export function CartTrigger({ variant = "desktop" }: CartTriggerProps) {
   const itemCount = useMarketplaceCart((state) => state.items.reduce((total, item) => total + item.quantity, 0));
   const toggle = useMarketplaceCart((state) => state.toggle);
+  const load = useMarketplaceCart((state) => state.load);
   const [pulse, setPulse] = useState(false);
 
   useEffect(() => {
+    void load();
     if (itemCount > 0) {
       setPulse(true);
       const timeout = window.setTimeout(() => setPulse(false), 600);

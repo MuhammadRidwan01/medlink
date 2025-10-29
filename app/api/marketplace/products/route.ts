@@ -1,12 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import {
-  MOCK_PRODUCTS,
-  type MarketplaceCategory,
-  type MarketplaceProduct,
-  type ProductContraindication,
-} from "@/components/features/marketplace/data";
+import { type MarketplaceCategory, type MarketplaceProduct, type ProductContraindication } from "@/components/features/marketplace/data";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 const CATEGORY_ORDER: MarketplaceCategory[] = ["Obat", "Vitamin", "Perangkat", "Layanan", "Herbal"];
@@ -99,7 +94,7 @@ export async function GET() {
   try {
     const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase
-      .from("commerce.marketplace_products")
+      .from("marketplace_products")
       .select<MarketplaceRow>(
         "id, slug, name, short_description, long_description, price, image_url, categories, tags, rating, rating_count, inventory_status, badges, contraindications",
       )
@@ -112,17 +107,6 @@ export async function GET() {
     const products =
       data?.map(mapRowToProduct).filter(Boolean) ?? [];
 
-    if (products.length === 0) {
-      return NextResponse.json(
-        {
-          source: "fallback",
-          count: MOCK_PRODUCTS.length,
-          products: MOCK_PRODUCTS,
-        },
-        { status: 200 },
-      );
-    }
-
     return NextResponse.json(
       {
         source: "supabase",
@@ -133,13 +117,6 @@ export async function GET() {
     );
   } catch (error) {
     console.error("[marketplace] failed to load products from supabase", error);
-    return NextResponse.json(
-      {
-        source: "fallback",
-        count: MOCK_PRODUCTS.length,
-        products: MOCK_PRODUCTS,
-      },
-      { status: 200 },
-    );
+    return NextResponse.json({ message: "Failed to load products" }, { status: 500 });
   }
 }
