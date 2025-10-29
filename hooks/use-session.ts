@@ -1,28 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Session, User } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { deriveRoleFromMetadata, type UserRole } from "@/lib/auth/role";
 
 type SessionStatus = "loading" | "authenticated" | "unauthenticated";
 
 type SessionState = {
   status: SessionStatus;
   session: Session | null;
-  user: User | null;
-  role: "patient" | "doctor";
+  user: Session["user"] | null;
+  role: UserRole;
 };
-
-function getRoleFromUser(user: User | null): "patient" | "doctor" {
-  if (!user) return "patient";
-  
-  // Check metadata first (set by activation API)
-  const metaRole = (user.user_metadata as any)?.role ?? (user.app_metadata as any)?.role;
-  if (metaRole === "doctor") return "doctor";
-  
-  // Default to patient
-  return "patient";
-}
 
 export function useSession(): SessionState {
   const [state, setState] = useState<SessionState>({
@@ -52,7 +42,7 @@ export function useSession(): SessionState {
       }
 
       const user = session?.user ?? null;
-      const role = getRoleFromUser(user);
+      const role = deriveRoleFromMetadata(user);
 
       setState({
         status: session ? "authenticated" : "unauthenticated",
@@ -69,7 +59,7 @@ export function useSession(): SessionState {
       if (!mounted) return;
 
       const user = session?.user ?? null;
-      const role = getRoleFromUser(user);
+      const role = deriveRoleFromMetadata(user);
 
       setState({
         status: session ? "authenticated" : "unauthenticated",
