@@ -1,8 +1,10 @@
  "use client";
 
 import { motion } from "framer-motion";
-import { Clock, CheckCircle2, XCircle, Pill, AlertCircle } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, Pill, AlertCircle, ChevronDown } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ApprovalStatusFlow } from "./approval-status-flow";
 
 type PrescriptionItem = {
   id: number;
@@ -29,6 +31,7 @@ type PrescriptionStatusCardProps = {
 };
 
 export function PrescriptionStatusCard({ prescription }: PrescriptionStatusCardProps) {
+  const [showFlow, setShowFlow] = useState(false);
   const isPending = prescription.approval_status === "pending";
   const isApproved = prescription.approval_status === "approved";
   const isRejected = prescription.approval_status === "rejected";
@@ -165,26 +168,47 @@ export function PrescriptionStatusCard({ prescription }: PrescriptionStatusCardP
         )}
       </div>
 
-      {/* Rejection Reason */}
-      {isRejected && prescription.rejection_reason && (
-        <div className="mt-3 rounded-lg border border-danger/20 bg-danger/5 p-3">
-          <div className="mb-1 text-xs font-semibold text-danger">Alasan Penolakan:</div>
-          <p className="text-xs text-danger/80">{prescription.rejection_reason}</p>
-        </div>
-      )}
+      {/* Approval Status Flow Toggle */}
+      <button
+        onClick={() => setShowFlow(!showFlow)}
+        className="tap-target mt-3 flex w-full items-center justify-between gap-2 rounded-lg border border-border/50 bg-muted/30 p-3 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors"
+      >
+        <span>Lihat Status Approval</span>
+        <ChevronDown 
+          className={cn(
+            "h-4 w-4 transition-transform duration-200",
+            showFlow && "rotate-180"
+          )} 
+        />
+      </button>
+
+      {/* Approval Status Flow */}
+      <AnimatePresence>
+        {showFlow && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="pt-3">
+              <ApprovalStatusFlow
+                approvalStatus={prescription.approval_status}
+                createdAt={prescription.created_at}
+                approvedAt={prescription.approved_at}
+                rejectionReason={prescription.rejection_reason}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Action Button */}
       {isApproved && (
         <button className="tap-target mt-3 w-full rounded-button bg-success px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:shadow-md">
           Beli Obat
         </button>
-      )}
-
-      {isPending && (
-        <div className="mt-3 flex items-center gap-2 rounded-lg bg-warning/10 p-2 text-xs text-warning">
-          <Clock className="h-3 w-3 shrink-0" />
-          <span>Estimasi review: 1-24 jam</span>
-        </div>
       )}
     </motion.div>
   );

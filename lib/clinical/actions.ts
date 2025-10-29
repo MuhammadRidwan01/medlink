@@ -20,8 +20,8 @@ export async function createPrescription(
   const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
-    .from("clinical.prescriptions")
-    .insert({ user_id: userId, doctor_id: doctorId, status: "draft" satisfies PrescriptionStatus })
+    .from("prescriptions")
+    .insert({ patient_id: userId, doctor_id: doctorId, status: "draft" satisfies PrescriptionStatus })
     .select()
     .single<DbPrescription>();
 
@@ -36,7 +36,7 @@ export async function addPrescriptionItem(
   const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
-    .from("clinical.prescription_items")
+    .from("prescription_items")
     .insert({ prescription_id: prescriptionId, ...payload })
     .select()
     .single<DbPrescriptionItem>();
@@ -52,7 +52,7 @@ export async function updatePrescriptionStatus(
   const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
-    .from("clinical.prescriptions")
+    .from("prescriptions")
     .update({ status })
     .eq("id", prescriptionId)
     .select()
@@ -72,7 +72,7 @@ export async function createClinicalOrder(
   const { status = "pending", ...rest } = payload;
 
   const { data, error } = await supabase
-    .from("clinical.clinical_orders")
+    .from("clinical_orders")
     .insert({ patient_id: patientId, doctor_id: doctorId, status, ...rest })
     .select()
     .single<DbClinicalOrder>();
@@ -88,7 +88,7 @@ export async function updateClinicalOrderStatus(
   const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
-    .from("clinical.clinical_orders")
+    .from("clinical_orders")
     .update({ status })
     .eq("id", id)
     .select()
