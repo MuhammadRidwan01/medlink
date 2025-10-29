@@ -86,7 +86,6 @@ function findMatchingProduct(
 export function useAddSuggestionsToCart() {
   const addItem = useMarketplaceCart((state) => state.addItem);
   const toggle = useMarketplaceCart((state) => state.toggle);
-  // @ts-expect-error dynamic setter injected in store
   const setCheckoutItems = usePaymentStore((state: any) => state.setCheckoutItems);
 
   const cacheRef = useRef<MarketplaceProduct[] | null>(null);

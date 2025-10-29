@@ -95,7 +95,7 @@ export async function GET() {
     const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase
       .from("marketplace_products")
-      .select<MarketplaceRow>(
+      .select(
         "id, slug, name, short_description, long_description, price, image_url, categories, tags, rating, rating_count, inventory_status, badges, contraindications",
       )
       .order("name", { ascending: true });
@@ -105,7 +105,9 @@ export async function GET() {
     }
 
     const products =
-      data?.map(mapRowToProduct).filter(Boolean) ?? [];
+      (data ?? [])
+        .map((row) => mapRowToProduct(row as MarketplaceRow))
+        .filter(Boolean);
 
     return NextResponse.json(
       {

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { consultationBus } from "@/components/features/consultation/event-bus";
 import { DateTimePicker } from "./date-time-picker";
@@ -47,7 +47,7 @@ export function MiniScheduler() {
       if (!res.ok) throw new Error("Gagal membuat janji");
       // Local optimistic add (optional, keep for instant feedback)
       bookAppointment({ consultId: prefill?.consultId, patient: patient.name ?? patient.email ?? "Patient", date: selection.date, time: selection.time, reason: "Follow-up" });
-      toast({ title: "Follow-up dijadwalkan", description: `${selection.date} • ${selection.time}` });
+      toast({ title: "Follow-up dijadwalkan", description: `${selection.date} - ${selection.time}` });
       setStep("confirm");
     } catch (e) {
       toast({ title: "Gagal", description: (e as Error).message, variant: "destructive" as any });
@@ -89,3 +89,4 @@ export function MiniScheduler() {
     </AnimatePresence>
   );
 }
+

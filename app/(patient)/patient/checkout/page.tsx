@@ -17,7 +17,7 @@ import { useProfileStore } from "@/components/features/profile/store";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const addresses = usePaymentStore((state) => state.addresses);
+  const storeAddresses = usePaymentStore((state) => state.addresses);
   const deliveryOptions = usePaymentStore((state) => state.deliveryOptions);
   const items = usePaymentStore((state) => state.checkoutItems);
   const profile = useProfileStore((s) => s.profile);
@@ -84,8 +84,8 @@ export default function CheckoutPage() {
 
   const addressesToUse = useMemo(() => {
     // Use profile-derived addresses first, then any user-added addresses
-    return [...profileAddresses, ...extraAddresses];
-  }, [profileAddresses, extraAddresses]);
+    return [...profileAddresses, ...storeAddresses, ...extraAddresses];
+  }, [profileAddresses, storeAddresses, extraAddresses]);
 
   const defaultAddress = useMemo(
     () => addressesToUse.find((address) => (address as any).isDefault) ?? addressesToUse[0],
@@ -149,7 +149,7 @@ export default function CheckoutPage() {
         phone: addr.phone,
         name: addr.recipient,
       });
-    } catch (_) {
+    } catch {
       // ignore errors here; user can still proceed with local address
     }
     // reset minimal fields but keep name/phone from profile for convenience

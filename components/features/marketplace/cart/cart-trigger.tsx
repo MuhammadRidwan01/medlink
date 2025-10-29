@@ -23,7 +23,7 @@ export function CartTrigger({ variant = "desktop" }: CartTriggerProps) {
       return () => window.clearTimeout(timeout);
     }
     return undefined;
-  }, [itemCount]);
+  }, [itemCount, load]);
 
   if (variant === "floating") {
     return (

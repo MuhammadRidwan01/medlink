@@ -116,7 +116,7 @@ Skema keluaran (JSON saja):
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
       body: groqBody,
     });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Failed to reach Groq" }, { status: 502 });
   }
 

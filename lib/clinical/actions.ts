@@ -68,16 +68,16 @@ export async function createClinicalOrder(
   payload: ClinicalOrderInput,
 ): Promise<{ data: DbClinicalOrder | null; error: PostgrestError | null }> {
   const supabase = await getSupabaseServerClient();
+  const from = (table: string) => (supabase.from as any)(table);
 
   const { status = "pending", ...rest } = payload;
 
-  const { data, error } = await supabase
-    .from("clinical_orders")
+  const { data, error } = await from("clinical_orders")
     .insert({ patient_id: patientId, doctor_id: doctorId, status, ...rest })
     .select()
-    .single<DbClinicalOrder>();
+    .single();
 
-  return { data: data ?? null, error };
+  return { data: (data ?? null) as DbClinicalOrder | null, error };
 }
 
 // Updates the status of an existing clinical order
@@ -86,15 +86,15 @@ export async function updateClinicalOrderStatus(
   status: ClinicalOrderStatus,
 ): Promise<{ data: DbClinicalOrder | null; error: PostgrestError | null }> {
   const supabase = await getSupabaseServerClient();
+  const from = (table: string) => (supabase.from as any)(table);
 
-  const { data, error } = await supabase
-    .from("clinical_orders")
+  const { data, error } = await from("clinical_orders")
     .update({ status })
     .eq("id", id)
     .select()
-    .single<DbClinicalOrder>();
+    .single();
 
-  return { data: data ?? null, error };
+  return { data: (data ?? null) as DbClinicalOrder | null, error };
 }
 
 // Convenience: create draft prescription, add items, and then submit for approval

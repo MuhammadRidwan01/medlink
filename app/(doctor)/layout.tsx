@@ -7,7 +7,6 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { Fab } from "@/components/layout/fab";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
-import { SessionSkeleton } from "@/components/layout/session-skeleton";
 import type { SidebarItem } from "@/components/layout/sidebar";
 
 const doctorNav = [

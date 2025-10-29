@@ -3,12 +3,15 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+type RouteContext = { params: Promise<{ id: string }> };
+
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: RouteContext,
 ) {
   try {
     const supabase = await getSupabaseServerClient();
+    const from = (table: string) => (supabase.from as any)(table);
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -18,8 +21,7 @@ export async function POST(
     }
 
     // Check if user is a doctor
-    const { data: doctorData } = await supabase
-      .from("doctors")
+    const { data: doctorData } = await from("doctors")
       .select("id, is_active")
       .eq("id", user.id)
       .single();
@@ -28,7 +30,7 @@ export async function POST(
       return NextResponse.json({ error: "Not a doctor or inactive" }, { status: 403 });
     }
 
-    const prescriptionId = params.id;
+    const { id: prescriptionId } = await context.params;
     const body = await request.json();
     const { reason } = body;
 
@@ -40,8 +42,7 @@ export async function POST(
     }
 
     // Get prescription details
-    const { data: prescription, error: fetchError } = await supabase
-      .from("prescriptions")
+    const { data: prescription, error: fetchError } = await from("prescriptions")
       .select("*")
       .eq("id", prescriptionId)
       .eq("doctor_id", user.id)
@@ -59,8 +60,7 @@ export async function POST(
     }
 
     // Reject prescription
-    const { data: updated, error: updateError } = await supabase
-      .from("prescriptions")
+    const { data: updated, error: updateError } = await from("prescriptions")
       .update({
         approval_status: "rejected",
         approved_by: user.id,

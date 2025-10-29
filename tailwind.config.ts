@@ -116,6 +116,7 @@ const config: Config = {
         in: "var(--ease-in)",
         out: "var(--ease-out)",
         "in-out": "var(--ease-in-out)",
+        smooth: "cubic-bezier(0.2, 0.8, 0.2, 1)",
       },
       keyframes: {
         "slide-in-from-bottom": {

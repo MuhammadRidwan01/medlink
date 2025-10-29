@@ -14,8 +14,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PrescriptionBubble } from "./prescription-bubble";
 import { cn } from "@/lib/utils";
 import { ChatMessage, type ChatMessageProps } from "./chat-message";
 import { QuickReplies, type QuickReply } from "./quick-replies";
@@ -176,7 +176,6 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const [sessionBusy, setSessionBusy] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [showFinalPanel, setShowFinalPanel] = useState(false);
-  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [otcBusy, setOtcBusy] = useState(false);
   const [otcSuggestions, setOtcSuggestions] = useState<Array<{
     name: string; code: string; strength: string; dose: string; frequency: string; duration: string; notes?: string; rationale?: string;
@@ -304,7 +303,6 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
       if (summary.recommendation?.type === "doctor" || 
           summary.recommendation?.type === "appointment" || 
           summary.recommendation?.type === "emergency") {
-        setShowAppointmentForm(true);
         const appointmentMessage = {
           id: `msg-appointment-${Date.now()}`,
           role: "ai" as const,
@@ -330,7 +328,7 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [isHydrated, summary?.recommendation, isStreaming, sessionStatus]);
+  }, [isHydrated, summary?.recommendation, isStreaming, sessionStatus, sessionId]);
 
   // Add OTC bubble after fetch completes AND session is completed
   useEffect(() => {
@@ -462,13 +460,9 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
         // If session is completed, check for existing bubbles to prevent duplicates
         if (data.session.status === "completed") {
           const hasOTCMessage = mapped.some(msg => msg.metadata?.type === "otc");
-          const hasAppointmentMessage = mapped.some(msg => msg.metadata?.type === "appointment");
           
           if (hasOTCMessage) {
             setOtcMessageAdded(true);
-          }
-          if (hasAppointmentMessage) {
-            setShowAppointmentForm(true);
           }
         }
       })
@@ -502,20 +496,6 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
       setSessionBusy(false);
     }
   }, [sessionBusy, scrollToBottom]);
-
-  const handleCompleteSession = useCallback(async () => {
-    if (sessionBusy) return;
-    setSessionBusy(true);
-    try {
-      const res = await fetch("/api/triage/session/complete", { method: "POST" });
-      if (!res.ok) return;
-      setBanner((prev) => ({ ...prev, visible: false }));
-      setSessionStatus("completed");
-      setShowFinalPanel(true);
-    } finally {
-      setSessionBusy(false);
-    }
-  }, [sessionBusy, setBanner]);
 
   const addMessage = useCallback((message: ChatMessageProps) => {
     setMessages((prev) => [...prev, message]);
@@ -866,7 +846,7 @@ return (
                 {summary.recommendation?.type === "otc" && otcSuggestions.length > 0 ? (
                   <AddToCartButton suggestions={otcSuggestions} />
                 ) : null}
-                <a
+                <Link
                   href="/doctor/consultation"
                   className="tap-target flex items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10"
                 >
@@ -874,7 +854,7 @@ return (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   Buat Appointment dengan Dokter
-                </a>
+                </Link>
                 <button
                   type="button"
                   onClick={handleResetSession}
@@ -885,7 +865,7 @@ return (
                   </svg>
                   Mulai Triage Baru
                 </button>
-                <a
+                <Link
                   href="/patient/dashboard"
                   className="tap-target flex items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50"
                 >
@@ -893,7 +873,7 @@ return (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
                   Kembali ke Dashboard
-                </a>
+                </Link>
               </div>
             </div>
           </motion.div>

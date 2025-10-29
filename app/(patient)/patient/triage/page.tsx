@@ -46,19 +46,31 @@ export default async function PatientTriagePage() {
       .order("created_at", { ascending: true });
 
     const mappedMessages: ChatMessageProps[] =
-      dbMessages?.map((message) => ({
-        id: `db-${message.id}`,
-        role: mapMessageRole(message.role),
-        content: message.content,
-        timestamp: formatTriageTimestamp(message.created_at ?? new Date()),
-        riskLevel:
-          typeof message.metadata?.risk_level === "string"
-            ? (message.metadata.risk_level as ChatMessageProps["riskLevel"])
-            : undefined,
-        redFlag: Array.isArray(message.metadata?.red_flags)
-          ? (message.metadata.red_flags as string[])[0]
-          : undefined,
-      })) ?? [];
+      dbMessages?.map((message) => {
+        const metadata = message.metadata;
+        const parsedMetadata = isMetadataRecord(metadata) ? metadata : null;
+
+        const riskLevel =
+          parsedMetadata && typeof parsedMetadata.risk_level === "string"
+            ? (parsedMetadata.risk_level as ChatMessageProps["riskLevel"])
+            : undefined;
+
+        const redFlag =
+          parsedMetadata &&
+          Array.isArray(parsedMetadata.red_flags) &&
+          typeof parsedMetadata.red_flags[0] === "string"
+            ? parsedMetadata.red_flags[0]
+            : undefined;
+
+        return {
+          id: `db-${message.id}`,
+          role: mapMessageRole(message.role),
+          content: message.content,
+          timestamp: formatTriageTimestamp(message.created_at ?? new Date()),
+          riskLevel,
+          redFlag,
+        };
+      }) ?? [];
 
     initialSession = {
       id: existingSession.id,
@@ -106,4 +118,13 @@ function mapMessageRole(role: string): ChatMessageProps["role"] {
     default:
       return "ai";
   }
+}
+
+type MetadataRecord = {
+  risk_level?: unknown;
+  red_flags?: unknown;
+};
+
+function isMetadataRecord(value: unknown): value is MetadataRecord {
+  return !!value && typeof value === "object" && !Array.isArray(value);
 }

@@ -342,7 +342,7 @@ export default function Home() {
                   className="flex h-full flex-col justify-between rounded-[28px] border border-border/60 bg-card/90 p-6 text-left shadow-sm transition hover:border-primary/40 hover:shadow-xl"
                 >
                   <blockquote className="text-base text-muted-foreground">
-                    "{testimonial.quote}"
+                    &ldquo;{testimonial.quote}&rdquo;
                   </blockquote>
                   <figcaption className="mt-6">
                     <p className="text-sm font-semibold text-foreground">{testimonial.name}</p>

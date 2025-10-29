@@ -56,6 +56,7 @@ type PaymentStore = {
   orders: Record<string, PaymentOrder>;
   developerOutcome: PaymentOutcome;
   setDeveloperOutcome: (outcome: PaymentOutcome) => void;
+  setCheckoutItems: (items: CheckoutItem[]) => void;
   createOrder: (input: CreateOrderInput) => Promise<{ orderId: string; paymentId: string }>;
   setActiveOrder: (orderId?: string) => void;
   setOrderStatus: (orderId: string, status: PaymentStatus) => void;
@@ -82,9 +83,6 @@ export const usePaymentStore = create<PaymentStore>()(
         orders: {},
         developerOutcome: "success",
         setDeveloperOutcome: (outcome) => set(() => ({ developerOutcome: outcome })),
-        // helper: allow setting items from marketplace cart
-        // (augment type without changing interface)
-        // @ts-expect-error dynamic assignment allowed in app code
         setCheckoutItems: (items: CheckoutItem[]) => set(() => ({ checkoutItems: items })),
         createOrder: async ({ addressId, deliveryOptionId, name, email, phone, notes }) => {
           const option =

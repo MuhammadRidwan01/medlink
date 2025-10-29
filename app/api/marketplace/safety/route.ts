@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { PATIENT_CONTEXT, type MarketplaceProduct } from "@/components/features/marketplace/data";
+import { PATIENT_CONTEXT, type MarketplaceCategory, type MarketplaceProduct } from "@/components/features/marketplace/data";
 import type { ProductContraindication } from "@/components/features/marketplace/data";
 import type {
   MarketplaceSafetyResult,
@@ -14,6 +14,8 @@ const normalize = (value: string) =>
     .replace(/\p{Diacritic}/gu, "")
     .trim()
     .toLowerCase();
+
+const CATEGORY_SET = new Set<MarketplaceCategory>(["Obat", "Vitamin", "Perangkat", "Layanan", "Herbal"]);
 
 async function fetchProductsByIdentifiers(supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>, identifiers: string[]): Promise<Record<string, MarketplaceProduct>> {
   if (identifiers.length === 0) return {};
@@ -30,14 +32,16 @@ async function fetchProductsByIdentifiers(supabase: Awaited<ReturnType<typeof ge
   const map: Record<string, MarketplaceProduct> = {};
   for (const row of data ?? []) {
     const product: MarketplaceProduct = {
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
+      id: row.id ?? "",
+      slug: row.slug ?? row.id ?? "",
+      name: row.name ?? "Produk",
       shortDescription: row.short_description ?? "",
       longDescription: row.long_description ?? "",
       price: Number(row.price ?? 0) || 0,
       imageUrl: row.image_url ?? "",
-      categories: (row.categories as string[] | null) ?? [],
+      categories: Array.isArray(row.categories)
+        ? (row.categories.filter((value): value is MarketplaceCategory => typeof value === "string" && CATEGORY_SET.has(value as MarketplaceCategory)))
+        : [],
       tags: (row.tags as string[] | null) ?? [],
       rating: Number(row.rating ?? 0) || 0,
       ratingCount: (row.rating_count as number | null) ?? 0,

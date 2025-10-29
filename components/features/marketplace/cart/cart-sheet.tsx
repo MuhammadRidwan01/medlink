@@ -17,7 +17,6 @@ export function CartSheet() {
   const warningsMap = useMarketplaceSafety((state) => state.warnings);
   const fetchConflicts = useMarketplaceSafety((state) => state.fetchConflicts);
   const router = useRouter();
-  // @ts-expect-error store has dynamic setter added
   const setCheckoutItems = usePaymentStore((state: any) => state.setCheckoutItems);
 
   useEffect(() => {

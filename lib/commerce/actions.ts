@@ -15,8 +15,6 @@ type CheckoutPayload = {
 
 type CheckoutResult = { orderId: string; paymentId: string };
 
-const isValidUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-
 export async function checkoutAction(payload: CheckoutPayload): Promise<CheckoutResult> {
   if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) {
     throw new Error('Keranjang kosong. Tambahkan produk sebelum melakukan checkout.');
@@ -61,8 +59,6 @@ export async function checkoutAction(payload: CheckoutPayload): Promise<Checkout
   if (!products || products.length !== slugs.length) {
     throw new Error('Beberapa produk tidak tersedia. Muat ulang halaman dan coba lagi.');
   }
-
-  const productBySlug = new Map(products.map((product) => [product.slug, product]));
 
   const normalizedChannel = payload.channel ? String(payload.channel) : null;
   const normalizedSnapToken = payload.snapToken ? String(payload.snapToken) : null;

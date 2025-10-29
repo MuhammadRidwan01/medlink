@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, ShoppingCart, Tag } from "lucide-react";
@@ -11,7 +11,6 @@ import { InventoryBadge } from "@/components/features/marketplace/inventory-badg
 import { RatingStars } from "@/components/features/marketplace/rating-stars";
 import { CartSheet } from "@/components/features/marketplace/cart/cart-sheet";
 import { CartTrigger } from "@/components/features/marketplace/cart/cart-trigger";
-import { useState, useEffect, useMemo } from "react";
 import type { MarketplaceProduct } from "@/components/features/marketplace/data";
 import { useMarketplaceCart, useMarketplaceSafety } from "@/components/features/marketplace/store";
 
@@ -58,18 +57,6 @@ export function ProductDetailPageClient({
   );
   const fetchConflicts = useMarketplaceSafety((state) => state.fetchConflicts);
   const productId = product?.id;
-
-  const relatedProducts = useMemo(() => {
-    if (!product) return [];
-
-    return MOCK_PRODUCTS.filter(
-      (item) =>
-        item.id !== product.id &&
-        item.categories.some((category) =>
-          product.categories.includes(category),
-        ),
-    ).slice(0, 4);
-  }, [product]);
 
   useEffect(() => {
     if (productId && warningEntry === undefined) {

@@ -54,7 +54,7 @@ Return concise warnings only if likely relevant.`;
     const parsed = JSON.parse(jsonText);
     if (!Array.isArray(parsed?.warnings)) return NextResponse.json({ warnings: [] });
     return NextResponse.json({ warnings: parsed.warnings });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: "Failed to parse AI output", raw: content }, { status: 422 });
   }
 }

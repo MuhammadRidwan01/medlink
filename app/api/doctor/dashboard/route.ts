@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const supabase = await getSupabaseServerClient();
+    const from = (table: string) => (supabase.from as any)(table);
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -15,8 +16,7 @@ export async function GET() {
     }
 
     // Check if user is a doctor
-    const { data: doctorData } = await supabase
-      .from("doctors")
+    const { data: doctorData } = await from("doctors")
       .select("id, specialty, is_active")
       .eq("id", user.id)
       .single();
@@ -32,8 +32,7 @@ export async function GET() {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     // Get triage sessions assigned to this doctor (high/emergency risk)
-    const { data: triageSessions, error: triageError } = await supabase
-      .from("triage_sessions")
+    const { data: triageSessions, error: triageError } = await from("triage_sessions")
       .select(`
         id,
         patient_id,
@@ -57,8 +56,7 @@ export async function GET() {
     }
 
     // Get pending prescriptions for approval
-    const { data: pendingPrescriptions, error: prescriptionsError } = await supabase
-      .from("prescriptions")
+    const { data: pendingPrescriptions, error: prescriptionsError } = await from("prescriptions")
       .select(`
         id,
         patient_id,
@@ -86,8 +84,7 @@ export async function GET() {
     }
 
     // Get today's appointments
-    const { data: appointments, error: appointmentsError } = await supabase
-      .from("appointments")
+    const { data: appointments, error: appointmentsError } = await from("appointments")
       .select(`
         id,
         patient_id,
@@ -110,14 +107,14 @@ export async function GET() {
     }
 
     // Calculate KPIs
-    const activeAppointments = (appointments || []).filter(a => a.status === "scheduled").length;
-    const completedAppointments = (appointments || []).filter(a => a.status === "completed").length;
+    const appointmentList = (appointments ?? []) as Array<{ status?: string | null }>;
+    const activeAppointments = appointmentList.filter((a) => a?.status === "scheduled").length;
+    const completedAppointments = appointmentList.filter((a) => a?.status === "completed").length;
     const pendingApprovals = (pendingPrescriptions || []).length;
-    const urgentCases = (triageSessions || []).filter(t => t.risk_level === "emergency").length;
+    const urgentCases = (triageSessions ?? []).filter((t: { risk_level?: string | null }) => t?.risk_level === "emergency").length;
 
     // Get recent consultation notes (from completed appointments)
-    const { data: recentNotes, error: notesError } = await supabase
-      .from("appointments")
+    const { data: recentNotes, error: notesError } = await from("appointments")
       .select(`
         id,
         patient_id,

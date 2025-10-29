@@ -12,7 +12,6 @@ import {
   RefreshCw,
   AlertTriangle,
   Clock,
-  CheckCircle2,
   ArrowRight,
   LogOut,
   RefreshCcw,
@@ -361,13 +360,11 @@ export function PatientDashboardClient() {
               {/* Additional Help for Session Issues */}
               {isSessionInvalid && (
                 <div className="mt-6 rounded-lg bg-muted/30 p-4 text-left">
-                  <h4 className="mb-2 text-sm font-semibold text-foreground">
-                    💡 Tips:
-                  </h4>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• Klik "Refresh Sesi" untuk memperbarui sesi Anda</li>
-                    <li>• Jika masih gagal, klik "Login Ulang"</li>
-                    <li>• Pastikan koneksi internet Anda stabil</li>
+                  <h4 className="mb-2 text-sm font-semibold text-foreground">Tips:</h4>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    <li>- Klik &ldquo;Refresh Sesi&rdquo; untuk memperbarui sesi Anda</li>
+                    <li>- Jika masih gagal, klik &ldquo;Login Ulang&rdquo;</li>
+                    <li>- Pastikan koneksi internet Anda stabil</li>
                   </ul>
                 </div>
               )}
@@ -548,3 +545,4 @@ export function PatientDashboardClient() {
     </PageShell>
   );
 }
+

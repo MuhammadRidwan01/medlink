@@ -43,19 +43,22 @@ function mapRow(row: MarketplaceRow) {
   };
 }
 
-export async function GET(_: Request, ctx: { params: { slug: string } }) {
+type RouteContext = { params: Promise<{ slug: string }> };
+
+export async function GET(_: Request, ctx: RouteContext) {
   try {
     const supabase = await getSupabaseServerClient();
+    const { slug } = await ctx.params;
     const { data, error } = await supabase
       .from("marketplace_products")
-      .select<MarketplaceRow>(
+      .select(
         "id, slug, name, short_description, long_description, price, image_url, categories, tags, rating, rating_count, inventory_status, badges, contraindications",
       )
-      .eq("slug", ctx.params.slug)
+      .eq("slug", slug)
       .maybeSingle();
     if (error) throw error;
     if (!data) return NextResponse.json({ message: "Not found" }, { status: 404 });
-    return NextResponse.json({ product: mapRow(data) });
+    return NextResponse.json({ product: mapRow(data as MarketplaceRow) });
   } catch (error) {
     console.error("[marketplace] failed to load product by slug", error);
     return NextResponse.json({ message: "Failed to load" }, { status: 500 });

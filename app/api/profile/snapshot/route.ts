@@ -326,7 +326,13 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const payload: Record<string, unknown> = {
+        const payload: {
+          user_id: string;
+          substance: string;
+          reaction?: string | null;
+          severity?: string | null;
+          id?: number;
+        } = {
           user_id: user.id,
           substance,
           reaction,
@@ -378,7 +384,14 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const payload: Record<string, unknown> = {
+        const payload: {
+          user_id: string;
+          name: string;
+          strength?: string | null;
+          frequency?: string | null;
+          status: string;
+          id?: number;
+        } = {
           user_id: user.id,
           name,
           strength,
@@ -405,7 +418,18 @@ export async function POST(request: NextRequest) {
 
       const { record } = body;
 
-      const payload: Record<string, unknown> = { id: user.id };
+      const payload: {
+        id: string;
+        email?: string | null;
+        name?: string | null;
+        dob?: string | null;
+        phone?: string | null;
+        address?: string | null;
+        weight_kg?: number | null;
+        height_cm?: number | null;
+        blood_type?: string | null;
+        sex?: string | null;
+      } = { id: user.id };
 
       if (record.email !== undefined) {
         payload.email = record.email?.trim() ?? null;

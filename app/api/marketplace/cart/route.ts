@@ -3,13 +3,6 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-type CartItemRow = {
-  id: number;
-  cart_id: string;
-  product_id: string;
-  qty: number | null;
-};
-
 type ProductRow = {
   id: string;
   slug: string;
@@ -60,10 +53,13 @@ async function getClientOr401() {
 async function serializeItems(supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>) {
   const { data, error } = await supabase.rpc("cart_items_detailed");
   if (error) throw error;
-  return (data ?? []).map((row: { product: ProductRow; quantity: number }) => ({
-    product: mapProduct((row as any).product),
-    quantity: Math.max(1, Math.min(10, Number((row as any).quantity ?? 1))),
-  }));
+  const rows = Array.isArray(data) ? (data as Array<{ product: ProductRow | null; quantity: number | null }>) : [];
+  return rows
+    .filter((row) => row.product !== null)
+    .map((row) => ({
+      product: mapProduct(row.product as ProductRow),
+      quantity: Math.max(1, Math.min(10, Number(row.quantity ?? 1))),
+    }));
 }
 
 export async function GET() {

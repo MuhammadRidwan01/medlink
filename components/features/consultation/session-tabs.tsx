@@ -68,7 +68,7 @@ export function SessionTabs({ messages, ordersSeed = [], snapshot, sessionActive
               aria-controls={`panel-${tab.value}`}
               id={`tab-${tab.value}`}
               className={cn(
-                "relative flex-1 overflow-hidden rounded-button px-4 py-2 text-sm font-semibold transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "relative flex-1 overflow-hidden rounded-button px-4 py-2 text-sm font-semibold transition-all duration-160 ease-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 "tap-target",
                 isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground/80",
               )}

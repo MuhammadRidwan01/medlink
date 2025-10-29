@@ -1,13 +1,10 @@
 "use client";
 
 import { AnimatePresence, cubicBezier, motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarDays, Pill, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  InteractionWarning,
-  type InteractionSeverity,
-} from "./interaction-warning";
+import { InteractionWarning } from "./interaction-warning";
 import {
   MedicationSearch,
   type MedicationOption,
@@ -41,34 +38,6 @@ type DraftPrescriptionSheetProps = {
   onSendForApproval: () => void;
   onCancel: () => void;
 };
-
-type InteractionRule = {
-  id: string;
-  combination: string[];
-  severity: InteractionSeverity;
-  title: string;
-  message: string;
-  recommendation: string;
-};
-
-const INTERACTION_RULES: InteractionRule[] = [
-  {
-    id: "atorvastatin-clarithromycin",
-    combination: ["atorvastatin", "clarithromycin"],
-    severity: "moderate",
-    title: "Interaksi metabolisme hati",
-    message: "Atorvastatin dengan klaritromisin meningkatkan risiko miopati.",
-    recommendation: "Pantau enzim hati dan pertimbangkan penyesuaian dosis.",
-  },
-  {
-    id: "salbutamol-propranolol",
-    combination: ["salbutamol", "propranolol"],
-    severity: "moderate",
-    title: "Penghambatan bronkodilator",
-    message: "Propranolol dapat mengurangi efek bronkodilatasi salbutamol.",
-    recommendation: "Pertimbangkan beta-blocker selektif atau pantau gejala pasien.",
-  },
-];
 
 const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
 

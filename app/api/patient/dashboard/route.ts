@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const supabase = await getSupabaseServerClient();
+    const from = (table: string) => (supabase.from as any)(table);
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -21,8 +22,7 @@ export async function GET() {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     // Get user's prescriptions with approval status
-    const { data: prescriptions, error: prescriptionsError } = await supabase
-      .from("prescriptions")
+    const { data: prescriptions, error: prescriptionsError } = await from("prescriptions")
       .select(`
         id,
         doctor_id,
@@ -50,8 +50,7 @@ export async function GET() {
     }
 
     // Get user's appointments
-    const { data: appointments, error: appointmentsError } = await supabase
-      .from("appointments")
+    const { data: appointments, error: appointmentsError } = await from("appointments")
       .select(`
         id,
         doctor_id,
@@ -71,8 +70,7 @@ export async function GET() {
     }
 
     // Get user's triage sessions
-    const { data: triageSessions, error: triageError } = await supabase
-      .from("triage_sessions")
+    const { data: triageSessions, error: triageError } = await from("triage_sessions")
       .select(`
         id,
         status,
@@ -90,25 +88,31 @@ export async function GET() {
     }
 
     // Calculate stats
-    const pendingPrescriptions = (prescriptions || []).filter(
-      p => p.approval_status === "pending"
+    const prescriptionList = (prescriptions ?? []) as Array<{ approval_status?: string | null; status?: string | null }>;
+    const pendingPrescriptions = prescriptionList.filter(
+      (p) => p?.approval_status === "pending"
     ).length;
 
-    const approvedPrescriptions = (prescriptions || []).filter(
-      p => p.approval_status === "approved" && p.status === "active"
+    const approvedPrescriptions = prescriptionList.filter(
+      (p) => p?.approval_status === "approved" && p?.status === "active"
     ).length;
 
-    const upcomingAppointments = (appointments || []).filter(
-      a => a.status === "scheduled"
+    const appointmentList = (appointments ?? []) as Array<{ status?: string | null; starts_at?: string | null }>;
+    const upcomingAppointments = appointmentList.filter(
+      (a) => a?.status === "scheduled"
     ).length;
 
-    const completedTriage = (triageSessions || []).filter(
-      t => t.status === "completed"
+    const triageList = (triageSessions ?? []) as Array<{ status?: string | null }>;
+    const completedTriage = triageList.filter(
+      (t) => t?.status === "completed"
     ).length;
 
     // Get next appointment
-    const nextAppointment = (appointments || []).find(
-      a => a.status === "scheduled" && new Date(a.starts_at) > new Date()
+    const nextAppointment = appointmentList.find(
+      (appointment) =>
+        appointment?.status === "scheduled" &&
+        appointment?.starts_at &&
+        new Date(appointment.starts_at) > new Date()
     );
 
     // Get latest triage session

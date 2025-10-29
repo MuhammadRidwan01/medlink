@@ -1,5 +1,3 @@
-"use server";
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
@@ -63,9 +61,9 @@ export async function POST(request: Request) {
   const supabase = createClient<Database>(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  const from = (table: string) => (supabase.from as any)(table);
 
-  const { data: paymentRow, error: paymentFetchError } = await supabase
-    .from("commerce.payments")
+  const { data: paymentRow, error: paymentFetchError } = await from("commerce.payments")
     .select("id, order_id")
     .eq("order_id", orderId)
     .order("created_at", { ascending: false })
@@ -81,8 +79,7 @@ export async function POST(request: Request) {
     return jsonResponse({ error: "Payment not found." }, { status: 404 });
   }
 
-  const { error: updatePaymentError } = await supabase
-    .from("commerce.payments")
+  const { error: updatePaymentError } = await from("commerce.payments")
     .update({ status: outcome })
     .eq("id", paymentRow.id);
 
@@ -92,8 +89,7 @@ export async function POST(request: Request) {
   }
 
   if (outcome === "success") {
-    const { error: updateOrderError } = await supabase
-      .from("commerce.orders")
+    const { error: updateOrderError } = await from("commerce.orders")
       .update({ status: "paid" })
       .eq("id", orderId);
 

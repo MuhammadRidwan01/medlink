@@ -1,6 +1,6 @@
  "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Clock, CheckCircle2, XCircle, Pill, AlertCircle, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -34,8 +34,6 @@ export function PrescriptionStatusCard({ prescription }: PrescriptionStatusCardP
   const [showFlow, setShowFlow] = useState(false);
   const isPending = prescription.approval_status === "pending";
   const isApproved = prescription.approval_status === "approved";
-  const isRejected = prescription.approval_status === "rejected";
-
   const rxItems = prescription.prescription_items.filter(
     (item) => item.medication_type === "prescription"
   );
@@ -142,7 +140,7 @@ export function PrescriptionStatusCard({ prescription }: PrescriptionStatusCardP
                     <div className="font-medium">{item.name} {item.strength}</div>
                     {item.dose && item.frequency && (
                       <div className="text-xs text-muted-foreground">
-                        {item.dose} • {item.frequency}
+                        {item.dose} - {item.frequency}
                       </div>
                     )}
                   </div>
@@ -160,7 +158,7 @@ export function PrescriptionStatusCard({ prescription }: PrescriptionStatusCardP
             <ul className="space-y-1">
               {otcItems.map((item) => (
                 <li key={item.id} className="text-xs text-muted-foreground">
-                  • {item.name} {item.strength}
+                  - {item.name} {item.strength}
                 </li>
               ))}
             </ul>
@@ -213,3 +211,4 @@ export function PrescriptionStatusCard({ prescription }: PrescriptionStatusCardP
     </motion.div>
   );
 }
+
