@@ -20,11 +20,11 @@ export async function POST(request: Request) {
   if (!starts_at || !ends_at) return NextResponse.json({ error: "starts_at and ends_at required (ISO)" }, { status: 400 });
 
   // Check doctor role
-  const { data: doctorRow } = await supabase.from("clinical.doctors").select("id, is_active").eq("id", doctorId).maybeSingle();
+  const { data: doctorRow } = await supabase.from("doctors").select("id, is_active").eq("id", doctorId).maybeSingle();
   if (!doctorRow?.id || doctorRow.is_active === false) return NextResponse.json({ error: "Only active doctors can create appointments" }, { status: 403 });
 
   const { data, error } = await supabase
-    .from("clinical.appointments")
+    .from("appointments")
     .insert({ patient_id: patientId, doctor_id: doctorId, starts_at, ends_at, reason, status: "scheduled" })
     .select("id, patient_id, doctor_id, starts_at, ends_at, reason, status")
     .single();
