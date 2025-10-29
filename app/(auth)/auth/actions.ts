@@ -237,13 +237,14 @@ export async function logoutAction() {
   // hapus sesi Supabase
   await supa.auth.signOut({ scope: "global" });
 
-  // bersihkan SEMUA jejak cookie auth
+  // bersihkan SEMUA jejak cookie auth (termasuk role cookie)
   const jar = await cookies();
   for (const name of [
     ACCESS_TOKEN_COOKIE,
     REFRESH_TOKEN_COOKIE,
     "sb-access-token",
     "sb-refresh-token",
+    "role", // hapus cookie role yang disetel saat aktivasi dokter
   ]) {
     try { jar.delete(name); } catch {}
   }
