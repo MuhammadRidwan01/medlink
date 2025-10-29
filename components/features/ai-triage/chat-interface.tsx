@@ -781,7 +781,7 @@ return (
             </AnimatePresence>
           </div>
 
-          <div className="border-t border-border/70 bg-background/95 px-4 py-4 safe-area-bottom md:px-6">
+          <div className="border-t border-border/60 bg-card/95 px-4 py-4 shadow-[0_6px_30px_-12px_rgba(15,23,42,0.35)] backdrop-blur safe-area-bottom md:px-6">
             <QuickReplies options={quickReplies} onSelect={handleQuickReply} disabled={isStreaming} />
             <form
               className="mt-4 flex items-end gap-3"
@@ -801,13 +801,13 @@ return (
                 ref={inputRef}
                 rows={1}
                 disabled={isStreaming || sessionStatus === "completed"}
-                className="tap-target h-14 flex-1 resize-none rounded-card border border-input bg-background px-4 py-3 text-body shadow-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                className="tap-target h-14 flex-1 resize-none rounded-[22px] border border-border/60 bg-background/90 px-4 py-3 text-body shadow-sm outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
               />
               <button
                 ref={sendButtonRef}
                 type="submit"
                 disabled={isStreaming || sessionStatus === "completed" || !inputValue.trim()}
-                className="interactive tap-target inline-flex h-14 items-center justify-center rounded-full bg-primary-gradient px-6 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+                className="interactive tap-target inline-flex h-14 items-center justify-center rounded-[22px] bg-primary-gradient px-6 text-sm font-semibold text-white shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70"
                 aria-label="Kirim jawaban"
               >
                 <Send className="h-5 w-5" />
@@ -824,7 +824,7 @@ return (
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="card-surface space-y-4 rounded-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background p-5 shadow-lg"
+            className="space-y-5 rounded-[28px] border border-primary/40 bg-gradient-to-br from-primary/10 via-background to-background/95 p-6 shadow-xl backdrop-blur-sm"
           >
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
@@ -843,7 +843,7 @@ return (
 
             {/* OTC Recommendations */}
             {summary.recommendation?.type === "otc" && otcSuggestions.length > 0 ? (
-              <div className="space-y-3 rounded-lg border border-border/60 bg-background p-4">
+              <div className="space-y-3 rounded-[20px] border border-border/50 bg-background/95 p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
@@ -855,9 +855,9 @@ return (
                     <li key={idx} className="rounded-lg border border-border/40 bg-muted/30 p-3">
                       <div className="font-semibold text-foreground">{s.name} {s.strength}</div>
                       <div className="mt-1 text-sm text-muted-foreground">
-                        <span className="font-medium">{s.dose}</span> • {s.frequency} • {s.duration}
+                        <span className="font-medium">{s.dose}</span> | {s.frequency} | {s.duration}
                       </div>
-                      {s.notes ? <div className="mt-2 rounded bg-background p-2 text-xs text-muted-foreground">💡 {s.notes}</div> : null}
+                      {s.notes ? <div className="mt-2 rounded bg-background p-2 text-xs text-muted-foreground">Catatan: {s.notes}</div> : null}
                     </li>
                   ))}
                 </ul>
@@ -870,7 +870,7 @@ return (
             ) : null}
 
             {/* Action Buttons */}
-            <div className="space-y-3 rounded-lg border border-border/60 bg-background p-4">
+            <div className="space-y-3 rounded-[20px] border border-border/50 bg-background/95 p-4 shadow-sm">
               <p className="text-sm font-semibold text-foreground">Pilih tindakan selanjutnya:</p>
               <div className="grid gap-2">
                 {summary.recommendation?.type === "otc" && otcSuggestions.length > 0 ? (
@@ -1229,11 +1229,11 @@ function OTCBubble({ suggestions, timestamp }: { suggestions: Array<{ name: stri
           <li key={idx} className="rounded-lg border border-border/40 bg-background/80 p-3">
             <div className="font-semibold text-foreground">{s.name} {s.strength}</div>
             <div className="mt-1 text-sm text-muted-foreground">
-              <span className="font-medium">{s.dose}</span> • {s.frequency} • {s.duration}
+              <span className="font-medium">{s.dose}</span> | {s.frequency} | {s.duration}
             </div>
             {s.notes ? (
               <div className="mt-2 rounded bg-muted/50 p-2 text-xs text-muted-foreground">
-                💡 {s.notes}
+                Catatan: {s.notes}
               </div>
             ) : null}
           </li>
