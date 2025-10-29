@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import {
   Bell,
+  History,
   LayoutDashboard,
   MessageSquare,
   Package,
@@ -34,6 +35,11 @@ const patientNav = [
     href: "/patient/notifications",
     label: "Notifikasi",
     icon: Bell,
+  },
+  {
+    href: "/patient/triage/history",
+    label: "Riwayat Triage",
+    icon: History,
   },
   {
     href: "/patient/prescriptions",

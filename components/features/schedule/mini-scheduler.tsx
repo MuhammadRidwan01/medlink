@@ -1,12 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { consultationBus } from "@/components/features/consultation/event-bus";
 import { DateTimePicker } from "./date-time-picker";
 import { ConfirmationCard } from "./confirmation-card";
 import { bookAppointment } from "./store";
+import { PatientPicker, type PatientLite } from "@/components/features/patients/patient-picker";
 
 type Prefill = { consultId: string; patientName?: string; date?: string } | null;
 
@@ -16,6 +17,8 @@ export function MiniScheduler() {
   const [prefill, setPrefill] = useState<Prefill>(null);
   const [step, setStep] = useState<"pick" | "confirm" | "done">("pick");
   const [selection, setSelection] = useState<{ date: string; time: string }>({ date: new Date().toISOString().slice(0, 10), time: "09:00" });
+  const [patient, setPatient] = useState<PatientLite | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const off = consultationBus.on("followup:suggest", (p) => {
@@ -27,11 +30,31 @@ export function MiniScheduler() {
     return off;
   }, []);
 
-  const onConfirm = useCallback(() => {
-    bookAppointment({ consultId: prefill?.consultId, patient: prefill?.patientName ?? "Patient", date: selection.date, time: selection.time, reason: "Follow-up" });
-    toast({ title: "Follow-up dijadwalkan", description: `${selection.date} • ${selection.time}` });
-    setStep("confirm");
-  }, [prefill, selection, toast]);
+  const onConfirm = useCallback(async () => {
+    if (!patient?.id) {
+      toast({ title: "Pilih pasien", description: "Pasien wajib dipilih", variant: "destructive" as any });
+      return;
+    }
+    setSaving(true);
+    try {
+      const starts_at = new Date(`${selection.date}T${selection.time}:00`);
+      const ends_at = new Date(starts_at.getTime() + 30 * 60 * 1000);
+      const res = await fetch("/api/clinical/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId: patient.id, starts_at: starts_at.toISOString(), ends_at: ends_at.toISOString(), reason: "Follow-up" }),
+      });
+      if (!res.ok) throw new Error("Gagal membuat janji");
+      // Local optimistic add (optional, keep for instant feedback)
+      bookAppointment({ consultId: prefill?.consultId, patient: patient.name ?? patient.email ?? "Patient", date: selection.date, time: selection.time, reason: "Follow-up" });
+      toast({ title: "Follow-up dijadwalkan", description: `${selection.date} • ${selection.time}` });
+      setStep("confirm");
+    } catch (e) {
+      toast({ title: "Gagal", description: (e as Error).message, variant: "destructive" as any });
+    } finally {
+      setSaving(false);
+    }
+  }, [patient, prefill, selection, toast]);
 
   return (
     <AnimatePresence>
@@ -43,10 +66,11 @@ export function MiniScheduler() {
               {step === "pick" ? (
                 <>
                   <h3 className="text-sm font-semibold text-foreground">Jadwalkan Follow-up</h3>
+                  <PatientPicker label="Pilih pasien" value={patient} onChange={setPatient} />
                   <DateTimePicker value={selection} onChange={setSelection} />
                   <div className="flex items-center justify-end gap-2">
                     <button type="button" onClick={() => setOpen(false)} className="tap-target rounded-button border border-border/60 bg-muted/30 px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted/50">Batal</button>
-                    <button type="button" onClick={onConfirm} className="tap-target rounded-button bg-primary-gradient px-4 py-2 text-sm font-semibold text-white shadow-md hover:shadow-lg">Konfirmasi</button>
+                    <button type="button" disabled={saving} onClick={onConfirm} className="tap-target rounded-button bg-primary-gradient px-4 py-2 text-sm font-semibold text-white shadow-md hover:shadow-lg disabled:opacity-60">{saving ? "Menyimpan…" : "Konfirmasi"}</button>
                   </div>
                 </>
               ) : null}

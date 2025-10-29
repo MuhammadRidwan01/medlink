@@ -54,27 +54,89 @@ export function useSession(): SessionState {
 
       const session = data.session ?? null;
       const user = session?.user ?? null;
+      // Default to patient for new users
+      let role: "patient" | "doctor" = "patient";
+      
+      // Only promote to doctor if explicit evidence exists
+      // Priority 1: Explicit cookie set after activation
+      try {
+        if (typeof document !== "undefined") {
+          const match = document.cookie.match(/(?:^|; )role=([^;]+)/);
+          if (match && decodeURIComponent(match[1]) === "doctor") {
+            role = "doctor";
+          }
+        }
+      } catch {}
+      
+      // Priority 2: Metadata (set by activation API)
+      if (role === "patient") {
+        const metaRole = (user?.user_metadata as any)?.role ?? (user?.app_metadata as any)?.role;
+        if (metaRole === "doctor") role = "doctor";
+      }
+      
+      // Set immediate state first to avoid long skeletons
       setState({
         status: session ? "authenticated" : "unauthenticated",
         session,
         user,
-        role: inferRoleFromEmail(user?.email ?? null),
+        role,
       });
+      
+      // Priority 3: Authoritative DB check (non-blocking): upgrade role if needed
+      if (session && role === "patient") {
+        try {
+          const { data: isDoc } = await supabase.rpc("is_doctor");
+          if (isDoc === true) {
+            setState((prev) => ({ ...prev, role: "doctor" }));
+          }
+        } catch {}
+      }
     };
 
     void resolve();
 
     const {
       data: authListener,
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
       const user = session?.user ?? null;
+      // Default to patient for new users
+      let role: "patient" | "doctor" = "patient";
+      
+      // Only promote to doctor if explicit evidence exists
+      // Priority 1: Explicit cookie set after activation
+      try {
+        if (typeof document !== "undefined") {
+          const match = document.cookie.match(/(?:^|; )role=([^;]+)/);
+          if (match && decodeURIComponent(match[1]) === "doctor") {
+            role = "doctor";
+          }
+        }
+      } catch {}
+      
+      // Priority 2: Metadata (set by activation API)
+      if (role === "patient") {
+        const metaRole = (user?.user_metadata as any)?.role ?? (user?.app_metadata as any)?.role;
+        if (metaRole === "doctor") role = "doctor";
+      }
+      
+      // Set immediate state
       setState({
         status: session ? "authenticated" : "unauthenticated",
         session: session ?? null,
         user,
-        role: inferRoleFromEmail(user?.email ?? null),
+        role,
       });
+      
+      // Priority 3: Upgrade role after RPC if still patient
+      if (session && role === "patient") {
+        try {
+          const { data: isDoc } = await supabase.rpc("is_doctor");
+          if (isDoc === true) {
+            setState((prev) => ({ ...prev, role: "doctor" }));
+          }
+        } catch {}
+      }
     });
 
     return () => {

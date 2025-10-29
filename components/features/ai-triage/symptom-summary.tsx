@@ -61,6 +61,15 @@ export function SymptomSummary({ summary, className, loading }: SymptomSummaryPr
         </div>
         <RiskBadge level={summary.riskLevel} />
       </div>
+      {summary.severity ? (
+        <motion.section
+          animate={changes.riskLevel ? { backgroundColor: "rgba(20,184,166,0.08)" } : { backgroundColor: "rgba(255,255,255,0)" }}
+          transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+          className="rounded-card border border-border/60 bg-card p-3 text-small text-muted-foreground"
+        >
+          <span className="font-semibold text-foreground">Keparahan:</span> {summary.severity}
+        </motion.section>
+      ) : null}
       <section>
         <header className="mb-2 flex items-center gap-2 text-small font-semibold text-foreground">
           <ListTodo className="h-4 w-4 text-primary" />
@@ -99,6 +108,32 @@ export function SymptomSummary({ summary, className, loading }: SymptomSummaryPr
               <li key={flag}>• {flag}</li>
             ))}
           </ul>
+        </motion.section>
+      ) : null}
+      {summary.recommendation ? (
+        <motion.section
+          animate={{ opacity: 1 }}
+          initial={{ opacity: 0.95 }}
+          transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+          className="space-y-2 rounded-card border border-primary/30 bg-primary/5 p-3"
+        >
+          <header className="text-small font-semibold text-primary">Rekomendasi</header>
+          {summary.recommendation.type ? (
+            <p className="text-small text-foreground">Tipe: {summary.recommendation.type}</p>
+          ) : null}
+          {summary.recommendation.urgency ? (
+            <p className="text-small text-foreground">Urgensi: {summary.recommendation.urgency}</p>
+          ) : null}
+          {summary.recommendation.reason ? (
+            <p className="text-small text-muted-foreground">Alasan: {summary.recommendation.reason}</p>
+          ) : null}
+          {Array.isArray(summary.recommendation.otcSuggestions) && summary.recommendation.otcSuggestions.length ? (
+            <ul className="space-y-1 text-small text-muted-foreground">
+              {summary.recommendation.otcSuggestions.map((s) => (
+                <li key={s}>• {s}</li>
+              ))}
+            </ul>
+          ) : null}
         </motion.section>
       ) : null}
     </div>

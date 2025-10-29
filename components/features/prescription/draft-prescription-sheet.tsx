@@ -2,7 +2,7 @@
 
 import { AnimatePresence, cubicBezier, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Pill, X } from "lucide-react";
+import { CalendarDays, Pill, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   InteractionWarning,
@@ -17,6 +17,7 @@ import {
   getCurrentProfileSnapshot,
   subscribeToProfileSnapshot,
 } from "@/components/features/profile/store";
+import { PatientPicker, type PatientLite } from "@/components/features/patients/patient-picker";
 
 type PatientSummary = {
   name: string;
@@ -85,6 +86,10 @@ export function DraftPrescriptionSheet({
   onCancel,
 }: DraftPrescriptionSheetProps) {
   const [profileAllergies, setProfileAllergies] = useState<string[]>(patient.allergies);
+  const [selectedPatient, setSelectedPatient] = useState<PatientLite | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [checkingInteractions, setCheckingInteractions] = useState(false);
+  const [aiWarnings, setAiWarnings] = useState<Array<{ id: string; severity: "low"|"moderate"|"high"; title: string; message: string; recommendation: string }>>([]);
 
   useEffect(() => {
     setProfileAllergies(patient.allergies);
@@ -104,12 +109,31 @@ export function DraftPrescriptionSheet({
 
   const allergiesForDisplay = profileAllergies.length ? profileAllergies : patient.allergies;
 
-  const interactionWarnings = useMemo(() => {
-    const codes = medications.map((med) => med.sourceId);
-    return INTERACTION_RULES.filter((rule) =>
-      rule.combination.every((code) => codes.includes(code)),
-    );
-  }, [medications]);
+  // AI interaction checks (debounced minimal)
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      if (!medications.length) { setAiWarnings([]); return; }
+      setCheckingInteractions(true);
+      try {
+        const payload = {
+          drugs: medications.map((m) => ({ name: m.name, code: m.sourceId, strength: m.strength })),
+          allergies: allergiesForDisplay,
+          activeMeds: [],
+        };
+        const res = await fetch("/api/ai/interactions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        if (!res.ok) throw new Error("AI interactions failed");
+        const data = await res.json();
+        if (!cancelled) setAiWarnings(Array.isArray(data?.warnings) ? data.warnings : []);
+      } catch {
+        if (!cancelled) setAiWarnings([]);
+      } finally {
+        if (!cancelled) setCheckingInteractions(false);
+      }
+    }
+    const t = window.setTimeout(run, 400);
+    return () => { cancelled = true; window.clearTimeout(t); };
+  }, [medications, allergiesForDisplay]);
 
   return (
     <AnimatePresence>
@@ -181,6 +205,9 @@ export function DraftPrescriptionSheet({
                         : "Draf aktif"}
                     </div>
                   </div>
+                  <div className="mt-4">
+                    <PatientPicker label="Pilih pasien (wajib untuk simpan/kirim)" value={selectedPatient} onChange={setSelectedPatient} />
+                  </div>
                   <div className="mt-4 flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-2 rounded-card border border-border/60 bg-muted/30 px-3 py-1 text-xs text-muted-foreground">
                       <CalendarDays className="h-4 w-4 text-primary" aria-hidden="true" />
@@ -219,6 +246,51 @@ export function DraftPrescriptionSheet({
                   disabledCodes={medications.map((med) => med.sourceId)}
                 />
 
+                <div className="flex items-center justify-end">
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.98 }}
+                    onClick={async () => {
+                      if (aiBusy) return;
+                      setAiBusy(true);
+                      try {
+                        const payload = {
+                          patient: {
+                            profile: selectedPatient ? { id: selectedPatient.id, name: selectedPatient.name ?? null, age: null, sex: null, bloodType: null } : null,
+                            allergies: allergiesForDisplay.map((a) => ({ substance: a })),
+                            meds: [],
+                          },
+                          triageSummary: null,
+                        };
+                        const res = await fetch("/api/ai/prescription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                        if (!res.ok) throw new Error("AI draft gagal");
+                        const data = await res.json();
+                        const items = Array.isArray(data?.suggestions) ? data.suggestions : [];
+                        for (const s of items) {
+                          onAddMedication({
+                            id: `ai-${Date.now()}-${Math.round(Math.random()*1000)}`,
+                            name: s.name,
+                            code: s.code || s.name.toLowerCase().replace(/\s+/g, "-"),
+                            strengths: [s.strength],
+                            defaultDose: s.dose,
+                            defaultFrequency: s.frequency,
+                            defaultDuration: s.duration,
+                            tags: [],
+                          });
+                        }
+                      } finally {
+                        setAiBusy(false);
+                      }
+                    }}
+                    className={cn(
+                      "tap-target inline-flex items-center gap-2 rounded-button border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary",
+                      aiBusy && "opacity-70 cursor-not-allowed",
+                    )}
+                  >
+                    <Sparkles className="h-4 w-4" /> Gunakan Saran AI
+                  </motion.button>
+                </div>
+
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-foreground">Obat terpilih</h3>
@@ -250,20 +322,18 @@ export function DraftPrescriptionSheet({
                   </AnimatePresence>
                 </section>
 
-                {interactionWarnings.length ? (
+                {(aiWarnings.length || checkingInteractions) ? (
                   <section className="space-y-3">
                     <h3 className="text-sm font-semibold text-foreground">
                       Potensi interaksi obat
                     </h3>
                     <div className="space-y-3">
-                      {interactionWarnings.map((warning) => (
-                        <InteractionWarning
-                          key={warning.id}
-                          severity={warning.severity}
-                          title={warning.title}
-                          message={warning.message}
-                          recommendation={warning.recommendation}
-                        />
+                      {checkingInteractions ? (
+                        <div className="rounded-card border border-dashed border-border/60 bg-muted/30 p-4 text-xs text-muted-foreground">
+                          Mengecek interaksi dengan AI…
+                        </div>
+                      ) : aiWarnings.map((w) => (
+                        <InteractionWarning key={w.id} severity={w.severity as any} title={w.title} message={w.message} recommendation={w.recommendation} />
                       ))}
                     </div>
                   </section>
@@ -291,7 +361,22 @@ export function DraftPrescriptionSheet({
                     <motion.button
                       type="button"
                       whileTap={{ scale: 0.98 }}
-                      onClick={onSaveDraft}
+                      onClick={async () => {
+                        if (!selectedPatient?.id) { alert("Pilih pasien terlebih dahulu"); return; }
+                        if (!medications.length) { alert("Tambahkan obat terlebih dahulu"); return; }
+                        try {
+                          const payload = {
+                            patientId: selectedPatient.id,
+                            items: medications.map((m) => ({ name: m.name, strength: m.strength, frequency: m.frequency, duration: m.duration, notes: m.notes })),
+                            submit: false,
+                          };
+                          const res = await fetch("/api/clinical/prescriptions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                          if (!res.ok) throw new Error("Gagal menyimpan draf");
+                          onSaveDraft();
+                        } catch (e) {
+                          alert((e as Error).message);
+                        }
+                      }}
                       className="tap-target inline-flex items-center justify-center gap-2 rounded-button border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:border-primary/40 hover:bg-primary/20"
                     >
                       Simpan Draf
@@ -299,7 +384,22 @@ export function DraftPrescriptionSheet({
                     <motion.button
                       type="button"
                       whileTap={{ scale: 0.98 }}
-                      onClick={onSendForApproval}
+                      onClick={async () => {
+                        if (!selectedPatient?.id) { alert("Pilih pasien terlebih dahulu"); return; }
+                        if (!medications.length) { alert("Tambahkan obat terlebih dahulu"); return; }
+                        try {
+                          const payload = {
+                            patientId: selectedPatient.id,
+                            items: medications.map((m) => ({ name: m.name, strength: m.strength, frequency: m.frequency, duration: m.duration, notes: m.notes })),
+                            submit: true,
+                          };
+                          const res = await fetch("/api/clinical/prescriptions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                          if (!res.ok) throw new Error("Gagal mengirim untuk persetujuan");
+                          onSendForApproval();
+                        } catch (e) {
+                          alert((e as Error).message);
+                        }
+                      }}
                       disabled={!medications.length}
                       className={cn(
                         "tap-target inline-flex items-center justify-center gap-2 rounded-button bg-primary-gradient px-5 py-2 text-sm font-semibold text-primary-foreground shadow-md transition-all duration-160 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60",

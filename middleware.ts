@@ -18,6 +18,7 @@ const decodeJwtPayload = (token?: string) => {
 };
 
 const resolveRole = (payload: Record<string, unknown> | null): "doctor" | "patient" => {
+  // Only promote to doctor if explicit metadata exists (set by activation API)
   const metaRole =
     (payload?.user_metadata as Record<string, unknown> | undefined)?.role ??
     (payload?.app_metadata as Record<string, unknown> | undefined)?.role;
@@ -25,15 +26,7 @@ const resolveRole = (payload: Record<string, unknown> | null): "doctor" | "patie
     return "doctor";
   }
 
-  const email =
-    (payload?.email as string | undefined) ??
-    ((payload?.user_metadata as Record<string, unknown> | undefined)?.email as
-      | string
-      | undefined);
-  if (email && email.toLowerCase().includes("doctor")) {
-    return "doctor";
-  }
-
+  // Default to patient for all new users (no email heuristic)
   return "patient";
 };
 
@@ -50,10 +43,15 @@ export function middleware(request: NextRequest) {
   }
 
   if (hasSession && isAuthRoute) {
+    // Prefer explicit role cookie (set after activation) to avoid waiting for JWT refresh
+    const roleCookie = request.cookies.get("role")?.value;
+    if (roleCookie === "doctor") {
+      return NextResponse.redirect(new URL("/doctor/dashboard", request.url));
+    }
+
     const payload = decodeJwtPayload(request.cookies.get("sb-access-token")?.value);
     const role = resolveRole(payload);
-    const dashboardUrl =
-      role === "doctor" ? "/doctor/dashboard" : "/patient/dashboard";
+    const dashboardUrl = role === "doctor" ? "/doctor/dashboard" : "/patient/dashboard";
     return NextResponse.redirect(new URL(dashboardUrl, request.url));
   }
 

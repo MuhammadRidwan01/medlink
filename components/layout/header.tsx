@@ -56,15 +56,17 @@ export function Header({ title, className, onMenuClick, children }: HeaderProps)
         >
           <Bell className="h-5 w-5" />
         </button>
-        <button
-      onClick={() => logoutAction()}
-      className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm
-                 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700
-                 ring-1 ring-slate-200 dark:ring-slate-700"
-      aria-label="Keluar"
-    >
-      <LogOut className="h-4 w-4" />
-    </button>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm
+                       bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700
+                       ring-1 ring-slate-200 dark:ring-slate-700"
+            aria-label="Keluar"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </form>
       </div>
     </header>
   );
