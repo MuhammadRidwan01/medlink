@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, cubicBezier } from "framer-motion";
 import type { EasingFunction, Transition } from "framer-motion";
 import {
@@ -13,6 +14,9 @@ import {
   Clock,
   CheckCircle2,
   ArrowRight,
+  LogOut,
+  RefreshCcw,
+  Home,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
@@ -85,10 +89,13 @@ function formatRelativeTime(isoString: string) {
 }
 
 export function PatientDashboardClient() {
+  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSessionInvalid, setIsSessionInvalid] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState(0);
 
   const fetchDashboard = useCallback(async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
@@ -102,16 +109,52 @@ export function PatientDashboardClient() {
       const response = await fetch("/api/patient/dashboard", {
         cache: "no-store",
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch dashboard data");
+      
+      // Handle 401 Unauthorized
+      if (response.status === 401) {
+        setIsSessionInvalid(true);
+        setError("Sesi Anda telah berakhir. Silakan refresh atau login kembali.");
+        setIsLoading(false);
+        setIsRefreshing(false);
+        return;
       }
 
+      // Handle other HTTP errors
+      if (!response.ok) {
+        throw new Error(`Gagal memuat data: ${response.statusText}`);
+      }
+
+      // Parse response
       const dashboardData = await response.json();
+      
+      // Handle API error responses (even with 200 status)
+      if (dashboardData?.error) {
+        if (dashboardData.error === "Unauthorized") {
+          setIsSessionInvalid(true);
+          setError("Sesi Anda telah berakhir. Silakan refresh atau login kembali.");
+          setIsLoading(false);
+          setIsRefreshing(false);
+          return;
+        }
+        throw new Error(dashboardData.error);
+      }
+      
+      // Validate data structure
+      if (!dashboardData || typeof dashboardData !== 'object') {
+        throw new Error("Data tidak valid dari server");
+      }
+      
       setData(dashboardData);
+      setIsSessionInvalid(false);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const errorMessage = err instanceof Error ? err.message : "Terjadi kesalahan yang tidak diketahui";
+      
+      if (errorMessage.includes("fetch") || errorMessage.includes("network")) {
+        setError("Tidak dapat terhubung ke server. Periksa koneksi internet Anda.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -120,7 +163,65 @@ export function PatientDashboardClient() {
 
   useEffect(() => {
     fetchDashboard();
-  }, [fetchDashboard]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  // Auto-redirect countdown for session invalid
+  useEffect(() => {
+    if (isSessionInvalid && redirectCountdown === 0) {
+      setRedirectCountdown(10); // Start 10 second countdown
+    }
+  }, [isSessionInvalid, redirectCountdown]);
+
+  useEffect(() => {
+    if (redirectCountdown > 0) {
+      const timer = setTimeout(() => {
+        setRedirectCountdown(redirectCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (redirectCountdown === 0 && isSessionInvalid) {
+      // Auto-redirect when countdown reaches 0
+      router.push("/auth/login?redirect=/patient/dashboard");
+    }
+  }, [redirectCountdown, isSessionInvalid, router]);
+
+  const handleRefreshSession = useCallback(async () => {
+    try {
+      // Try to refresh the session by calling auth refresh
+      const response = await fetch("/api/auth/refresh", {
+        method: "POST",
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        // Session refreshed successfully, retry dashboard fetch
+        setIsSessionInvalid(false);
+        setError(null);
+        setRedirectCountdown(0); // Reset countdown
+        await fetchDashboard(false);
+      } else {
+        // Refresh failed, redirect to login
+        router.push("/auth/login?redirect=/patient/dashboard");
+      }
+    } catch (err) {
+      console.error("Session refresh failed:", err);
+      router.push("/auth/login?redirect=/patient/dashboard");
+    }
+  }, [fetchDashboard, router]);
+
+  const handleLogout = useCallback(async () => {
+    setRedirectCountdown(0); // Cancel countdown
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        cache: "no-store",
+      });
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      router.push("/auth/login");
+    }
+  }, [router]);
 
   const highlightCards: HighlightCard[] = data
     ? [
@@ -175,33 +276,11 @@ export function PatientDashboardClient() {
     },
   ];
 
-  if (error) {
-    return (
-      <PageShell title="Dashboard" subtitle="Ringkasan kesehatan Anda">
-        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-card border border-danger/20 bg-danger/5 p-8">
-          <AlertTriangle className="h-12 w-12 text-danger" />
-          <div className="text-center">
-            <h3 className="mb-2 text-lg font-semibold text-foreground">
-              Gagal Memuat Dashboard
-            </h3>
-            <p className="mb-4 text-sm text-muted-foreground">{error}</p>
-            <button
-              onClick={() => fetchDashboard()}
-              className="tap-target rounded-button bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:shadow-md"
-            >
-              Coba Lagi
-            </button>
-          </div>
-        </div>
-      </PageShell>
-    );
-  }
-
   return (
     <PageShell title="Dashboard" subtitle="Ringkasan kesehatan Anda">
       <div className="space-y-6">
         {/* Loading State */}
-        {isLoading && (
+        {isLoading && !error && (
           <div className="flex min-h-[400px] items-center justify-center">
             <div className="text-center">
               <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
@@ -212,8 +291,92 @@ export function PatientDashboardClient() {
           </div>
         )}
 
+        {/* Error State */}
+        {!isLoading && error && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex min-h-[400px] items-center justify-center"
+          >
+            <div className="w-full max-w-md text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-danger/10">
+                <AlertTriangle className="h-8 w-8 text-danger" />
+              </div>
+              
+              <h3 className="mb-2 text-lg font-semibold text-foreground">
+                {isSessionInvalid ? "Sesi Berakhir" : "Terjadi Kesalahan"}
+              </h3>
+              
+              <p className="mb-6 text-sm text-muted-foreground">
+                {error}
+                {redirectCountdown > 0 && (
+                  <span className="block mt-2 text-warning">
+                    Auto-redirect ke halaman login dalam {redirectCountdown} detik...
+                  </span>
+                )}
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+                {isSessionInvalid ? (
+                  <>
+                    <button
+                      onClick={handleRefreshSession}
+                      className="tap-target flex items-center justify-center gap-2 rounded-button bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:shadow-md"
+                    >
+                      <RefreshCcw className="h-4 w-4" />
+                      <span>Refresh Sesi</span>
+                    </button>
+                    
+                    <button
+                      onClick={handleLogout}
+                      className="tap-target flex items-center justify-center gap-2 rounded-button border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Login Ulang</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => fetchDashboard(true)}
+                      disabled={isRefreshing}
+                      className="tap-target flex items-center justify-center gap-2 rounded-button bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:shadow-md disabled:opacity-60"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                      <span>Coba Lagi</span>
+                    </button>
+                    
+                    <Link
+                      href="/patient/triage"
+                      className="tap-target flex items-center justify-center gap-2 rounded-button border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
+                    >
+                      <Home className="h-4 w-4" />
+                      <span>Halaman Utama</span>
+                    </Link>
+                  </>
+                )}
+              </div>
+
+              {/* Additional Help for Session Issues */}
+              {isSessionInvalid && (
+                <div className="mt-6 rounded-lg bg-muted/30 p-4 text-left">
+                  <h4 className="mb-2 text-sm font-semibold text-foreground">
+                    💡 Tips:
+                  </h4>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• Klik "Refresh Sesi" untuk memperbarui sesi Anda</li>
+                    <li>• Jika masih gagal, klik "Login Ulang"</li>
+                    <li>• Pastikan koneksi internet Anda stabil</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* Dashboard Content */}
-        {!isLoading && data && (
+        {!isLoading && !error && data && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

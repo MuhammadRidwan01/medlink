@@ -1,8 +1,8 @@
 'use server';
 
-import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
 type LoginPayload = {
   email: string;
   password: string;
@@ -40,73 +40,6 @@ type RegisterResult =
       message: string;
     };
 
-const ACCESS_TOKEN_COOKIE = 'sb-access-token';
-const REFRESH_TOKEN_COOKIE = 'sb-refresh-token';
-const SECURE_COOKIE = process.env.NODE_ENV === 'production';
-
-const getSupabaseActionClient = () => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    throw new Error(
-      'Supabase environment variables are missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
-    );
-  }
-
-  return createClient(url, anonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-};
-
-const upsertProfileSnapshot = async (params: {
-  accessToken: string;
-  userId: string;
-  email: string | null;
-  fullName: string | null;
-}) => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    throw new Error(
-      'Supabase environment variables are missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
-    );
-  }
-
-  const client = createClient(url, anonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${params.accessToken}`,
-      },
-    },
-  });
-
-  const { error } = await client
-    .from('profiles')
-    .upsert(
-      {
-        id: params.userId,
-        email: params.email,
-        name: params.fullName,
-      },
-      { onConflict: 'id' },
-    );
-
-  if (error) {
-    console.error('[auth] failed to upsert profile snapshot', error);
-  }
-};
-
 export async function loginAction(payload: LoginPayload): Promise<LoginResult> {
   const email = payload.email.trim().toLowerCase();
   const password = payload.password;
@@ -115,7 +48,7 @@ export async function loginAction(payload: LoginPayload): Promise<LoginResult> {
     return { ok: false, message: 'Email dan kata sandi wajib diisi.' };
   }
 
-  const supabase = getSupabaseActionClient();
+  const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -127,55 +60,36 @@ export async function loginAction(payload: LoginPayload): Promise<LoginResult> {
   }
 
   const session = data.session;
-  const cookieStore = await cookies();
 
-  const expiresAtSeconds = session.expires_at ?? null;
-  const maxAge =
-    expiresAtSeconds !== null
-      ? Math.max(expiresAtSeconds - Math.floor(Date.now() / 1000), 0)
-      : 60 * 60 * 24 * 7;
+  // Upsert profile
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .upsert(
+      {
+        id: session.user.id,
+        email: session.user.email ?? session.user.user_metadata?.email ?? null,
+        name:
+          session.user.user_metadata?.full_name ??
+          session.user.user_metadata?.name ??
+          null,
+      },
+      { onConflict: 'id' },
+    );
 
-  cookieStore.set({
-    name: ACCESS_TOKEN_COOKIE,
-    value: session.access_token,
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: SECURE_COOKIE,
-    path: '/',
-    maxAge,
-  });
-
-  cookieStore.set({
-    name: REFRESH_TOKEN_COOKIE,
-    value: session.refresh_token,
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: SECURE_COOKIE,
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30,
-  });
-
-  await upsertProfileSnapshot({
-    accessToken: session.access_token,
-    userId: session.user.id,
-    email: session.user.email ?? session.user.user_metadata?.email ?? null,
-    fullName:
-      session.user.user_metadata?.full_name ??
-      session.user.user_metadata?.name ??
-      null,
-  });
+  if (profileError) {
+    console.error('[auth] failed to upsert profile:', profileError);
+  }
 
   return {
     ok: true,
     session: {
       access_token: session.access_token,
       refresh_token: session.refresh_token,
-      expires_at: expiresAtSeconds,
+      expires_at: session.expires_at ?? null,
     },
     user: {
       id: session.user.id,
-      email:
-        session.user.email ?? session.user.user_metadata?.email ?? null,
+      email: session.user.email ?? session.user.user_metadata?.email ?? null,
       full_name:
         session.user.user_metadata?.full_name ??
         session.user.user_metadata?.name ??
@@ -202,7 +116,7 @@ export async function registerAction(
     };
   }
 
-  const supabase = getSupabaseActionClient();
+  const supabase = await createClient();
   const redirectBase =
     process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? '';
   const normalizedRedirect =
@@ -216,7 +130,7 @@ export async function registerAction(
     options: {
       data: {
         full_name: fullName,
-         role: "patient"
+        role: "patient"
       },
       emailRedirectTo: normalizedRedirect
         ? `${normalizedRedirect}/auth/login`
@@ -232,22 +146,7 @@ export async function registerAction(
 }
 
 export async function logoutAction() {
-  const supa = getSupabaseActionClient();
-
-  // hapus sesi Supabase
-  await supa.auth.signOut({ scope: "global" });
-
-  // bersihkan SEMUA jejak cookie auth (termasuk role cookie)
-  const jar = await cookies();
-  for (const name of [
-    ACCESS_TOKEN_COOKIE,
-    REFRESH_TOKEN_COOKIE,
-    "sb-access-token",
-    "sb-refresh-token",
-    "role", // hapus cookie role yang disetel saat aktivasi dokter
-  ]) {
-    try { jar.delete(name); } catch {}
-  }
-
+  const supabase = await createClient();
+  await supabase.auth.signOut();
   redirect("/auth/login");
 }

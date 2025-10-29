@@ -1,14 +1,9 @@
 "use client";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import type { Database } from "@/types/supabase";
 
-let client: SupabaseClient | null = null;
-
-export const getSupabaseBrowserClient = () => {
-  if (client) {
-    return client;
-  }
-
+export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -18,13 +13,8 @@ export const getSupabaseBrowserClient = () => {
     );
   }
 
-  client = createClient(url, anonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  });
+  return createBrowserClient<Database>(url, anonKey);
+}
 
-  return client;
-};
+// Legacy export for backward compatibility
+export const getSupabaseBrowserClient = createClient;

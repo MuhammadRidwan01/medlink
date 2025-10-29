@@ -1,13 +1,11 @@
 "use client";
 
-import { Suspense, type FormEvent, useMemo, useState } from "react";
+import { Suspense, type FormEvent, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { inferRoleFromEmail } from "@/hooks/use-session";
 import { loginAction } from "../actions";
 
 type LoginFormState = {
@@ -24,7 +22,6 @@ export default function LoginPage() {
 }
 
 function LoginContent() {
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -69,24 +66,14 @@ function LoginContent() {
       description: "Anda berhasil masuk.",
     });
 
-    const role = inferRoleFromEmail(form.email.trim());
+    // Determine redirect destination
+    const role = result.user.full_name?.toLowerCase().includes("doctor") ? "doctor" : "patient";
     const fallbackRoute = role === "doctor" ? "/doctor/dashboard" : "/patient/dashboard";
     const destination = redirectTo ?? fallbackRoute;
 
-    try {
-      await supabase.auth.setSession({
-        access_token: result.session.access_token,
-        refresh_token: result.session.refresh_token,
-      });
-    } catch (sessionError) {
-      console.error("[login] failed to sync client session", sessionError);
-    }
-
-    setTimeout(() => {
-      router.replace(destination);
-      router.refresh();
-    }, 200);
-    setIsLoading(false);
+    // Redirect to dashboard
+    router.replace(destination);
+    router.refresh();
   };
 
   return (

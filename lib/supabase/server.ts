@@ -1,10 +1,8 @@
 import { cookies } from "next/headers";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import type { Database } from "@/types/supabase";
 
-const ACCESS_TOKEN_COOKIE = "sb-access-token";
-const REFRESH_TOKEN_COOKIE = "sb-refresh-token";
-
-export const getSupabaseServerClient = async (): Promise<SupabaseClient> => {
+export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -15,34 +13,26 @@ export const getSupabaseServerClient = async (): Promise<SupabaseClient> => {
   }
 
   const cookieStore = await cookies();
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value ?? null;
-  const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value ?? null;
 
-  const client = createClient(url, anonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
-    },
-    global: {
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : {},
+  return createServerClient<Database>(url, anonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // The `setAll` method was called from a Server Component.
+          // This can be ignored if you have middleware refreshing
+          // user sessions.
+        }
+      },
     },
   });
+}
 
-  if (accessToken && refreshToken) {
-    try {
-      await client.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-    } catch (error) {
-      console.error("[supabase] failed to set server session", error);
-    }
-  }
-
-  return client;
-};
+// Legacy export for backward compatibility
+export const getSupabaseServerClient = createClient;

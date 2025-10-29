@@ -1,61 +1,66 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 const PROTECTED_PREFIXES = ["/patient", "/doctor"];
 const AUTH_PREFIX = "/auth";
 
-const decodeJwtPayload = (token?: string) => {
-  if (!token) return null;
-  const segments = token.split(".");
-  if (segments.length < 2) return null;
-  try {
-    const base64 = segments[1].replace(/-/g, "+").replace(/_/g, "/");
-    const decoded = atob(base64);
-    return JSON.parse(decoded) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-};
-
-const resolveRole = (payload: Record<string, unknown> | null): "doctor" | "patient" => {
-  // Only promote to doctor if explicit metadata exists (set by activation API)
-  const metaRole =
-    (payload?.user_metadata as Record<string, unknown> | undefined)?.role ??
-    (payload?.app_metadata as Record<string, unknown> | undefined)?.role;
-  if (metaRole === "doctor") {
-    return "doctor";
-  }
-
-  // Default to patient for all new users (no email heuristic)
-  return "patient";
-};
-
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hasSession = Boolean(request.cookies.get("sb-access-token")?.value);
   const isProtected = PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   const isAuthRoute = pathname.startsWith(AUTH_PREFIX);
 
-  if (isProtected && !hasSession) {
+  // IMPORTANT: Do not touch non-GET requests (e.g., Server Actions POST)
+  // Modifying these requests can break Next.js Server Actions and cause
+  // "Invalid Server Actions request" errors.
+  if (request.method !== "GET") {
+    return NextResponse.next();
+  }
+
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  // Redirect to login if accessing protected route without session
+  if (isProtected && !session) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (hasSession && isAuthRoute) {
-    // Prefer explicit role cookie (set after activation) to avoid waiting for JWT refresh
-    const roleCookie = request.cookies.get("role")?.value;
-    if (roleCookie === "doctor") {
-      return NextResponse.redirect(new URL("/doctor/dashboard", request.url));
-    }
-
-    const payload = decodeJwtPayload(request.cookies.get("sb-access-token")?.value);
-    const role = resolveRole(payload);
+  // Redirect to dashboard if accessing auth route with session
+  if (session && isAuthRoute) {
+    const role = (session.user.user_metadata?.role ?? session.user.app_metadata?.role) as string | undefined;
     const dashboardUrl = role === "doctor" ? "/doctor/dashboard" : "/patient/dashboard";
     return NextResponse.redirect(new URL(dashboardUrl, request.url));
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

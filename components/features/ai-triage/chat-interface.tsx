@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, AlertTriangle, ArrowDown, X } from "lucide-react";
-import { useMarketplaceCart, MOCK_PRODUCTS } from "@/components/features/marketplace/store";
+import { useMarketplaceCart } from "@/components/features/marketplace/store";
+import { createClient } from "@/lib/supabase/client";
 import { OTCBubble } from "./otc-bubble";
 import { AppointmentBubble } from "./appointment-bubble";
 import { PrescriptionBubble } from "./prescription-bubble";
@@ -870,6 +871,7 @@ async function streamTriageResponse({
     const timestamp = formatTriageTimestamp(new Date());
     let aggregated = "";
     let isFirstChunk = true;
+    let lastAppliedSummary = previousSummary;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -884,6 +886,12 @@ async function streamTriageResponse({
         isFirstChunk = false;
       } else {
         updateMessage(aiMessageId, { content: aggregated });
+      }
+
+      const partialInsight = parseTriageInsight(aggregated, lastAppliedSummary);
+      if (hasSignificantChange(lastAppliedSummary, partialInsight)) {
+        setSummary(partialInsight);
+        lastAppliedSummary = partialInsight;
       }
     }
 
@@ -1113,55 +1121,71 @@ function AddToCartButton({ suggestions }: { suggestions: Array<{ name: string; c
   const toggle = useMarketplaceCart((state) => state.toggle);
   const [adding, setAdding] = useState(false);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     setAdding(true);
     let addedCount = 0;
     const notFound: string[] = [];
+    const supabase = createClient();
 
     for (const s of suggestions) {
-      // Fuzzy matching: try multiple strategies
       const searchTerm = s.name.toLowerCase();
-      const product = MOCK_PRODUCTS.find((p) => {
-        const nameLower = p.name.toLowerCase();
-        const slugLower = p.slug.toLowerCase();
-        const tagsLower = p.tags.join(" ").toLowerCase();
-        
-        // Strategy 1: exact slug match
-        if (slugLower === s.code?.toLowerCase()) return true;
-        
-        // Strategy 2: slug contains search term
-        if (s.code && slugLower.includes(s.code.toLowerCase())) return true;
-        
-        // Strategy 3: name contains search term or vice versa
-        if (nameLower.includes(searchTerm) || searchTerm.includes(nameLower.split(" ")[0])) return true;
-        
-        // Strategy 4: tags match (e.g., "dekongestan", "paracetamol")
-        if (tagsLower.includes(searchTerm)) return true;
-        
-        // Strategy 5: first word match
-        const firstWord = searchTerm.split(" ")[0];
-        if (firstWord.length > 3 && (nameLower.includes(firstWord) || tagsLower.includes(firstWord))) return true;
-        
-        return false;
-      });
+      let row: { id: string; slug: string | null; title: string | null; price: number | null } | null = null;
 
-      if (product) {
-        addItem(product);
-        addedCount++;
-      } else {
+      try {
+        // 1) Exact slug match (preferred)
+        if (s.code) {
+          const { data } = await (supabase as any)
+            .from("commerce.products")
+            .select("id, slug, title, price")
+            .eq("slug", s.code)
+            .maybeSingle();
+          if (data) row = data as any;
+        }
+
+        // 2) Fallback: fuzzy search by slug/title
+        if (!row) {
+          const { data } = await (supabase as any)
+            .from("commerce.products")
+            .select("id, slug, title, price")
+            .or(`slug.ilike.%${searchTerm}%,title.ilike.%${searchTerm}%`)
+            .limit(1);
+          if (data && data.length) row = data[0] as any;
+        }
+
+        if (row?.id) {
+          // Construct minimal product to satisfy cart.addItem typing
+          const product = {
+            id: row.id,
+            slug: row.slug ?? "",
+            name: row.title ?? row.slug ?? s.name,
+            shortDescription: "",
+            longDescription: "",
+            price: Number(row.price ?? 0),
+            imageUrl: "",
+            categories: [],
+            tags: [],
+            rating: 0,
+            ratingCount: 0,
+            inventoryStatus: "in-stock" as const,
+          };
+          await addItem(product);
+          addedCount++;
+        } else {
+          notFound.push(s.name);
+        }
+      } catch (e) {
+        console.error("Lookup product failed", e);
         notFound.push(s.name);
       }
     }
 
-    setTimeout(() => {
-      setAdding(false);
-      if (addedCount > 0) {
-        toggle(true); // Open cart sheet
-      }
-      if (notFound.length > 0) {
-        console.warn("Produk tidak ditemukan:", notFound);
-      }
-    }, 300);
+    setAdding(false);
+    if (addedCount > 0) {
+      toggle(true); // Open cart sheet
+    }
+    if (notFound.length > 0) {
+      console.warn("Produk tidak ditemukan:", notFound);
+    }
   };
 
   return (
