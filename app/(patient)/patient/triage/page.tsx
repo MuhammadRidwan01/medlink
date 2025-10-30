@@ -11,7 +11,13 @@ import {
 } from "@/types/triage";
 import type { ChatMessageProps } from "@/components/features/ai-triage/chat-message";
 
-export default async function PatientTriagePage() {
+type PatientTriagePageProps = {
+  searchParams?: {
+    session?: string;
+  };
+};
+
+export default async function PatientTriagePage({ searchParams }: PatientTriagePageProps) {
   const supabase = await getSupabaseServerClient();
   const {
     data: { user },
@@ -21,28 +27,65 @@ export default async function PatientTriagePage() {
     redirect("/login");
   }
 
-  const { data: existingSession } = await supabase
-    .from("triage_sessions")
-    .select("id, summary")
-    .eq("patient_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const requestedSessionId =
+    typeof searchParams?.session === "string" && searchParams.session.trim()
+      ? searchParams.session.trim()
+      : undefined;
+
+  type SessionRow = {
+    id: string;
+    summary: unknown;
+    status: "active" | "completed" | null;
+    updated_at: string | null;
+  };
+
+  let sessionRow: SessionRow | null = null;
+
+  if (requestedSessionId) {
+    const { data, error } = await supabase
+      .from("triage_sessions")
+      .select("id, summary, status, updated_at")
+      .eq("patient_id", user.id)
+      .eq("id", requestedSessionId)
+      .maybeSingle<SessionRow>();
+
+    if (!error && data) {
+      sessionRow = data;
+    }
+  }
+
+  if (!sessionRow) {
+    const { data } = await supabase
+      .from("triage_sessions")
+      .select("id, summary, status, updated_at")
+      .eq("patient_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<SessionRow>();
+
+    sessionRow = data ?? null;
+  }
 
   let initialSession:
     | {
         id: string;
+        status: "active" | "completed";
         summary: TriageSummary;
         messages: ChatMessageProps[];
       }
     | undefined;
 
-  if (existingSession) {
-    const summary = coerceTriageSummary(existingSession.summary, createEmptyTriageSummary());
+  if (sessionRow) {
+    const summary = coerceTriageSummary(sessionRow.summary, createEmptyTriageSummary());
+
+    if (sessionRow.updated_at) {
+      summary.updatedAt = sessionRow.updated_at;
+    }
+
     const { data: dbMessages } = await supabase
       .from("triage_messages")
       .select("id, role, content, created_at, metadata")
-      .eq("session_id", existingSession.id)
+      .eq("session_id", sessionRow.id)
       .order("created_at", { ascending: true });
 
     const mappedMessages: ChatMessageProps[] =
@@ -62,18 +105,24 @@ export default async function PatientTriagePage() {
             ? parsedMetadata.red_flags[0]
             : undefined;
 
+        const occurredAtIso = message.created_at ?? new Date().toISOString();
+        const occurredAtDate = new Date(occurredAtIso);
+
         return {
           id: `db-${message.id}`,
           role: mapMessageRole(message.role),
           content: message.content,
-          timestamp: formatTriageTimestamp(message.created_at ?? new Date()),
+          timestamp: formatTriageTimestamp(occurredAtDate),
+          occurredAt: occurredAtIso,
           riskLevel,
           redFlag,
+          metadata: parsedMetadata ?? undefined,
         };
       }) ?? [];
 
     initialSession = {
-      id: existingSession.id,
+      id: sessionRow.id,
+      status: sessionRow.status === "completed" ? "completed" : "active",
       summary,
       messages: mappedMessages,
     };
@@ -121,6 +170,7 @@ function mapMessageRole(role: string): ChatMessageProps["role"] {
 }
 
 type MetadataRecord = {
+  [key: string]: unknown;
   risk_level?: unknown;
   red_flags?: unknown;
 };

@@ -19,8 +19,6 @@ type SidebarProps = {
   mobileOpen?: boolean;
   onNavigate?: () => void;
   variant?: "default" | "floating";
-  desktopMode?: "sticky" | "static";
-  scrollable?: boolean;
 };
 
 export function Sidebar({
@@ -30,8 +28,6 @@ export function Sidebar({
   mobileOpen = false,
   onNavigate,
   variant = "default",
-  desktopMode = "sticky",
-  scrollable = true,
 }: SidebarProps) {
   const pathname = usePathname();
 
@@ -45,11 +41,6 @@ export function Sidebar({
       ? "bg-white/95 shadow-xl backdrop-blur-xl dark:bg-slate-900/90"
       : "bg-background shadow-xl";
 
-  const desktopPlacementClass =
-    desktopMode === "sticky"
-      ? "md:sticky md:top-24 md:max-h-[calc(100vh-6rem)] md:overflow-hidden"
-      : "md:relative md:self-start";
-
   return (
     <aside
       className={cn(
@@ -60,16 +51,11 @@ export function Sidebar({
               "fixed inset-y-0 left-0 z-50 flex flex-col overflow-y-auto rounded-r-[28px] md:relative md:flex",
               mobileClass,
             )
-          : cn("hidden flex-col md:flex", desktopPlacementClass),
+          : "hidden flex-col md:sticky md:top-24 md:flex md:max-h-[calc(100vh-6rem)] md:overflow-hidden",
         className,
       )}
     >
-      <nav
-        className={cn(
-          "flex-1 space-y-1 pr-1",
-          scrollable ? "overflow-y-auto" : "overflow-visible",
-        )}
-      >
+      <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
         {items.map((item) => {
           const isActive =
             pathname === item.href ||

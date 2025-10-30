@@ -204,6 +204,7 @@ export async function POST(request: Request) {
           const data = trimmed.slice(5).trim();
           if (!data || data === "[DONE]") {
             if (data === "[DONE]") {
+              completed = true;
               safeClose();
               return;
             }

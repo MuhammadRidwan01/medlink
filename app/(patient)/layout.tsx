@@ -78,7 +78,7 @@ function PatientBackgroundCanvas() {
 export default function PatientLayout({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const fallback = (
-    <div className="relative isolate flex min-h-screen flex-col overflow-hidden patient-aurora">
+    <div className="relative isolate flex min-h-screen flex-col overflow-hidden md:overflow-visible patient-aurora">
       <PatientBackgroundCanvas />
       <div className="relative z-10 flex min-h-screen flex-col">
         <div className="px-4 pb-4 pt-6 md:px-12 md:pb-8">
@@ -101,7 +101,7 @@ export default function PatientLayout({ children }: { children: ReactNode }) {
   return (
     <Suspense fallback={fallback}>
       <SessionGate allowedRoles={["patient"]} fallback={fallback}>
-        <div className="relative isolate flex min-h-screen flex-col overflow-hidden patient-aurora">
+        <div className="relative isolate flex min-h-screen flex-col overflow-hidden md:overflow-visible patient-aurora">
           <PatientBackgroundCanvas />
           <div className="relative z-10 flex min-h-screen flex-col">
             <Header
@@ -118,19 +118,12 @@ export default function PatientLayout({ children }: { children: ReactNode }) {
                   onClick={() => setIsSidebarOpen(false)}
                 />
               ) : null}
-              <div className="w-0 md:w-72 md:shrink-0 md:pr-2 lg:pr-4">
-                <div className="md:sticky md:top-[112px] md:pl-0">
-                  <Sidebar
-                    items={patientNav}
-                    mobileOpen={isSidebarOpen}
-                    onNavigate={() => setIsSidebarOpen(false)}
-                    variant="floating"
-                    desktopMode="static"
-                    scrollable={false}
-                    className="md:px-0 md:py-0"
-                  />
-                </div>
-              </div>
+              <Sidebar
+                items={patientNav}
+                mobileOpen={isSidebarOpen}
+                onNavigate={() => setIsSidebarOpen(false)}
+                variant="floating"
+              />
               <main className="relative flex-1 px-4 pb-28 pt-6 md:px-0 md:pb-20 md:pt-8">
                 <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
                   {children}

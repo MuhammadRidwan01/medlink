@@ -28,6 +28,7 @@ import {
 } from "@/components/features/profile/store";
 import {
   createEmptyTriageSummary,
+  coerceTriageSummary,
   formatTriageTimestamp,
   parseTriageInsight,
   hasSignificantChange,
@@ -82,6 +83,7 @@ type TriageRequestContext = {
 type ChatInterfaceProps = {
   initialSession?: {
     id: string;
+    status: "active" | "completed";
     summary: TriageSummary;
     messages: ChatMessageProps[];
   };
@@ -144,18 +146,22 @@ type TimelineEntry =
 
 export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const [sessionId, setSessionId] = useState<string | null>(initialSession?.id ?? null);
-  const [sessionStatus, setSessionStatus] = useState<"active" | "completed">("active");
+  const [sessionStatus, setSessionStatus] = useState<"active" | "completed">(
+    initialSession?.status ?? "active",
+  );
   const [messages, setMessages] = useState<ChatMessageProps[]>(() => {
     if (initialSession?.messages?.length) {
       return initialSession.messages;
     }
+    const now = new Date();
     return [
       {
         id: "msg-ai-welcome",
         role: "ai",
         content:
           "Halo, saya MedLink AI. Saya akan menanyakan beberapa pertanyaan untuk memahami kondisi Anda. Dokter akan meninjau hasil akhirnya.",
-        timestamp: formatTriageTimestamp(new Date()),
+        timestamp: formatTriageTimestamp(now),
+        occurredAt: now.toISOString(),
       },
     ];
   });
@@ -175,7 +181,7 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
   const [sessionBusy, setSessionBusy] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const [showFinalPanel, setShowFinalPanel] = useState(false);
+  const [showFinalPanel, setShowFinalPanel] = useState(initialSession?.status === "completed");
   const [otcBusy, setOtcBusy] = useState(false);
   const [otcSuggestions, setOtcSuggestions] = useState<Array<{
     name: string; code: string; strength: string; dose: string; frequency: string; duration: string; notes?: string; rationale?: string;
@@ -248,6 +254,9 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
     if (summary?.recommendation?.type !== "otc") {
       otcAutoFetchedRef.current = false;
       setOtcMessageAdded(false);
+      if (otcSuggestions.length) {
+        setOtcSuggestions([]);
+      }
       return;
     }
     if (otcAutoFetchedRef.current) return;
@@ -303,11 +312,13 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
       if (summary.recommendation?.type === "doctor" || 
           summary.recommendation?.type === "appointment" || 
           summary.recommendation?.type === "emergency") {
+        const now = new Date();
         const appointmentMessage = {
           id: `msg-appointment-${Date.now()}`,
           role: "ai" as const,
           content: "",
-          timestamp: formatTriageTimestamp(new Date()),
+          timestamp: formatTriageTimestamp(now),
+          occurredAt: now.toISOString(),
           metadata: { type: "appointment" },
         };
         setMessages((prev) => [...prev, appointmentMessage]);
@@ -337,11 +348,13 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
     if (otcSuggestions.length === 0 || otcMessageAdded || otcBusy) return;
     
     setOtcMessageAdded(true);
+    const now = new Date();
     const otcMessage = {
       id: `msg-otc-${Date.now()}`,
       role: "ai" as const,
       content: "",
-      timestamp: formatTriageTimestamp(new Date()),
+      timestamp: formatTriageTimestamp(now),
+      occurredAt: now.toISOString(),
       metadata: { type: "otc", suggestions: otcSuggestions },
     };
     
@@ -422,52 +435,98 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
 
   useEffect(() => {
     if (!isHydrated) return;
-    if (initialSession?.id) return;
-    if (sessionId) return;
+    const targetSessionId = sessionId ?? initialSession?.id;
+    if (!targetSessionId) return;
+
+    let isCancelled = false;
     setRestoring(true);
-    fetch("/api/triage/session", { method: "GET" })
+
+    const params = new URLSearchParams({ sessionId: targetSessionId });
+
+    fetch(`/api/triage/session?${params.toString()}`, { method: "GET" })
       .then(async (res) => {
-        if (!res.ok) return;
+        if (!res.ok || isCancelled) return;
         const data = (await res.json()) as {
-          session: { id: string; status: "active" | "completed"; summary: TriageSummary } | null;
+          session: {
+            id: string;
+            status: "active" | "completed" | null;
+            summary: TriageSummary | null;
+            updated_at?: string | null;
+          } | null;
           messages: Array<{
             id: number | string;
             role: string;
             content: string;
             created_at?: string;
-            metadata?: Record<string, any>;
+            metadata?: Record<string, any> | null;
           }>;
         };
-        if (!data.session) return;
+
+        if (!data.session || isCancelled) return;
+
         setSessionId(data.session.id);
-        setSessionStatus(data.session.status ?? "active");
-        setShowFinalPanel(data.session.status === "completed");
-        setSummary(data.session.summary ?? createEmptyTriageSummary());
-        const mapped: ChatMessageProps[] = (data.messages || []).map((m) => ({
-          id: `db-${m.id}`,
-          role: m.role === "user" ? "user" : m.role === "doctor" ? "doctor" : "ai",
-          content: m.content,
-          timestamp: formatTriageTimestamp(m.created_at ?? new Date()),
-          riskLevel:
-            typeof m.metadata?.risk_level === "string"
-              ? (m.metadata.risk_level as ChatMessageProps["riskLevel"])
-              : undefined,
-          redFlag: Array.isArray(m.metadata?.red_flags) ? (m.metadata.red_flags as string[])[0] : undefined,
-          metadata: m.metadata, // Preserve full metadata including OTC/appointment data
-        }));
-        setMessages((prev) => (prev.length > 1 ? prev : mapped.length ? mapped : prev));
-        
-        // If session is completed, check for existing bubbles to prevent duplicates
-        if (data.session.status === "completed") {
-          const hasOTCMessage = mapped.some(msg => msg.metadata?.type === "otc");
-          
-          if (hasOTCMessage) {
-            setOtcMessageAdded(true);
-          }
+        const nextStatus = data.session.status ?? "active";
+        setSessionStatus(nextStatus);
+        setShowFinalPanel(nextStatus === "completed");
+
+        const hydratedSummary = coerceTriageSummary(
+          data.session.summary,
+          initialSession?.summary ?? createEmptyTriageSummary(),
+        );
+        if (data.session.updated_at) {
+          hydratedSummary.updatedAt = data.session.updated_at;
+        }
+        setSummary(hydratedSummary);
+
+        const mapped: ChatMessageProps[] = (data.messages || []).map((m) => {
+          const occurredAtDate = m.created_at ? new Date(m.created_at) : new Date();
+          const occurredAtIso = occurredAtDate.toISOString();
+          const metadata =
+            m.metadata && typeof m.metadata === "object" && !Array.isArray(m.metadata)
+              ? (m.metadata as Record<string, any>)
+              : undefined;
+          return {
+            id: `db-${m.id}`,
+            role: m.role === "user" ? "user" : m.role === "doctor" ? "doctor" : "ai",
+            content: m.content,
+            timestamp: formatTriageTimestamp(occurredAtDate),
+            occurredAt: occurredAtIso,
+            riskLevel:
+              metadata && typeof metadata.risk_level === "string"
+                ? (metadata.risk_level as ChatMessageProps["riskLevel"])
+                : undefined,
+            redFlag:
+              metadata && Array.isArray(metadata.red_flags) && typeof metadata.red_flags[0] === "string"
+                ? (metadata.red_flags[0] as string)
+                : undefined,
+            metadata,
+          };
+        });
+
+        if (isCancelled) return;
+
+        if (mapped.length) {
+          setMessages(mapped);
+        }
+
+        setOtcMessageAdded(mapped.some((msg) => msg.metadata?.type === "otc"));
+      })
+      .catch((error) => {
+        if (!isCancelled) {
+          console.error("Failed to restore triage session:", error);
         }
       })
-      .finally(() => setRestoring(false));
-  }, [isHydrated, initialSession, sessionId]);
+      .finally(() => {
+        if (!isCancelled) {
+          setRestoring(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHydrated, sessionId, initialSession?.id]);
 
   const handleResetSession = useCallback(async () => {
     if (sessionBusy) return;
@@ -480,14 +539,28 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
       };
       if (data.session) {
         setSessionId(data.session.id);
+        setSessionStatus("active");
+        setShowFinalPanel(false);
         setSummary(data.session.summary ?? createEmptyTriageSummary());
+        setBanner({
+          visible: false,
+          severity: "warning",
+          message: "",
+          hasShaken: false,
+        });
+        setOtcSuggestions([]);
+        setOtcMessageAdded(false);
+        setOtcBusy(false);
+        otcAutoFetchedRef.current = false;
+        const now = new Date();
         setMessages([
           {
             id: "msg-ai-welcome",
             role: "ai",
             content:
               "Halo, saya MedLink AI. Saya akan menanyakan beberapa pertanyaan untuk memahami kondisi Anda. Dokter akan meninjau hasil akhirnya.",
-            timestamp: formatTriageTimestamp(new Date()),
+            timestamp: formatTriageTimestamp(now),
+            occurredAt: now.toISOString(),
           },
         ]);
         scrollToBottom("auto");
@@ -501,11 +574,17 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
     setMessages((prev) => [...prev, message]);
   }, []);
 
-  const updateMessage = useCallback((messageId: string, updater: Partial<ChatMessageProps>) => {
-    setMessages((prev) =>
-      prev.map((msg) => (msg.id === messageId ? { ...msg, ...updater } : msg)),
-    );
-  }, []);
+  const updateMessage = useCallback(
+    (messageId: string, updater: Partial<ChatMessageProps>) => {
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === messageId ? { ...msg, ...updater } : msg)),
+      );
+      if (isAtBottom) {
+        requestAnimationFrame(() => scrollToBottom("smooth"));
+      }
+    },
+    [isAtBottom, scrollToBottom],
+  );
 
   const handleSendMessage = useCallback(
     async (text: string) => {
@@ -521,6 +600,7 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
         role: "user",
         content: trimmed,
         timestamp: formatTriageTimestamp(now),
+        occurredAt: now.toISOString(),
       };
 
       const history = buildChatHistory([...messages, userMessage]);
@@ -528,15 +608,19 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
       addMessage(userMessage);
       setInputValue("");
       setIsStreaming(true);
+      requestAnimationFrame(() => scrollToBottom("smooth"));
 
       const aiMessageId = `msg-ai-${Date.now()}`;
+      const aiStartedAt = new Date();
       addMessage({
         id: aiMessageId,
         role: "ai",
         content: "",
         timestamp: "",
+        occurredAt: aiStartedAt.toISOString(),
         isTyping: true,
       });
+      requestAnimationFrame(() => scrollToBottom("smooth"));
 
       try {
         await streamTriageResponse({
@@ -571,6 +655,25 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
       patientContext,
       sessionId,
     ],
+  );
+
+  const handleComposerKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key !== "Enter" || event.shiftKey) {
+        return;
+      }
+      if (isStreaming || sessionStatus === "completed") {
+        event.preventDefault();
+        return;
+      }
+      if (!inputValue.trim()) {
+        event.preventDefault();
+        return;
+      }
+      event.preventDefault();
+      handleSendMessage(inputValue);
+    },
+    [handleSendMessage, inputValue, isStreaming, sessionStatus],
   );
 
   const handleQuickReply = useCallback(
@@ -621,11 +724,11 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const riskTheme = useMemo(() => riskThemes[summary.riskLevel ?? "low"], [summary.riskLevel]);
   const summaryUpdatedLabel = useMemo(() => formatSummaryUpdated(summary.updatedAt), [summary.updatedAt]);
 
-  const timelineEntries = useMemo(() => {
+const timelineEntries = useMemo(() => {
     const entries: TimelineEntry[] = [];
     let lastLabel: string | null = null;
     for (const message of messages) {
-      const meta = getTimelineMeta(message.timestamp);
+      const meta = getTimelineMeta(message);
       if (meta && meta.label !== lastLabel) {
         entries.push({
           type: "divider",
@@ -723,6 +826,11 @@ return (
               return <ChatMessage key={message.id} {...message} />;
             })}
 
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-card via-card/85 to-transparent"
+            />
+
             <div ref={bottomRef} className="h-1 w-full" />
 
             <AnimatePresence>
@@ -751,38 +859,84 @@ return (
             </AnimatePresence>
           </div>
 
-          <div className="border-t border-border/60 bg-card/95 px-4 py-4 shadow-[0_6px_30px_-12px_rgba(15,23,42,0.35)] backdrop-blur safe-area-bottom md:px-6">
-            <QuickReplies options={quickReplies} onSelect={handleQuickReply} disabled={isStreaming} />
-            <form
-              className="mt-4 flex items-end gap-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                handleSendMessage(inputValue);
-              }}
-            >
-              <label className="sr-only" htmlFor="triage-input">
-                Jawab pertanyaan AI
-              </label>
-              <textarea
-                id="triage-input"
-                placeholder="Ceritakan gejala yang Anda rasakan..."
-                value={inputValue}
-                onChange={(event) => setInputValue(event.target.value)}
-                ref={inputRef}
-                rows={1}
+          <div className="relative border-t border-border/40 bg-card/90 px-4 py-5 shadow-[0_12px_40px_-18px_rgba(15,23,42,0.55)] backdrop-blur-xl safe-area-bottom md:px-6">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-6 top-0 h-6 rounded-t-[24px] bg-gradient-to-t from-transparent via-card/60 to-card/95"
+            />
+            <div className="relative space-y-3">
+              <QuickReplies
+                options={quickReplies}
+                onSelect={handleQuickReply}
                 disabled={isStreaming || sessionStatus === "completed"}
-                className="tap-target h-14 flex-1 resize-none rounded-[22px] border border-border/60 bg-background/90 px-4 py-3 text-body shadow-sm outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
               />
-              <button
-                ref={sendButtonRef}
-                type="submit"
-                disabled={isStreaming || sessionStatus === "completed" || !inputValue.trim()}
-                className="interactive tap-target inline-flex h-14 items-center justify-center rounded-[22px] bg-primary-gradient px-6 text-sm font-semibold text-white shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70"
-                aria-label="Kirim jawaban"
+              <AnimatePresence>
+                {isStreaming && sessionStatus !== "completed" ? (
+                  <motion.div
+                    key="streaming-indicator"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                    className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1.5 text-xs font-medium text-primary"
+                  >
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                    AI sedang menganalisis jawaban Anda...
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            {sessionStatus === "completed" ? (
+              <div className="mt-4 flex flex-col gap-3 rounded-[22px] border border-primary/30 bg-primary/5 p-4 text-sm text-primary">
+                <div className="flex items-center gap-2 font-semibold">
+                  <RefreshCw className="h-4 w-4" aria-hidden />
+                  Sesi triage sudah selesai
+                </div>
+                <p className="text-sm text-primary/80">
+                  Mulai sesi baru jika Anda ingin melakukan pengecekan gejala lagi.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResetSession}
+                  className="tap-target inline-flex items-center justify-center gap-2 rounded-[20px] bg-primary-gradient px-6 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <RefreshCw className="h-4 w-4" aria-hidden />
+                  Mulai Sesi Baru
+                </button>
+              </div>
+            ) : (
+              <form
+                className="mt-4 flex items-end gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleSendMessage(inputValue);
+                }}
               >
-                <Send className="h-5 w-5" />
-              </button>
-            </form>
+                <label className="sr-only" htmlFor="triage-input">
+                  Jawab pertanyaan AI
+                </label>
+                <textarea
+                  id="triage-input"
+                  placeholder="Ceritakan gejala yang Anda rasakan..."
+                  value={inputValue}
+                  onChange={(event) => setInputValue(event.target.value)}
+                  onKeyDown={handleComposerKeyDown}
+                  ref={inputRef}
+                  rows={1}
+                  disabled={isStreaming}
+                  className="tap-target h-14 flex-1 resize-none rounded-[22px] border border-border/40 bg-background/95 px-4 py-3 text-body shadow-lg outline-none transition-all placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background/60 disabled:opacity-60"
+                />
+                <button
+                  ref={sendButtonRef}
+                  type="submit"
+                  disabled={isStreaming || !inputValue.trim()}
+                  className="interactive tap-target inline-flex h-14 items-center justify-center rounded-[22px] bg-primary-gradient px-6 text-sm font-semibold text-white shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70"
+                  aria-label="Kirim jawaban"
+                >
+                  <Send className="h-5 w-5" />
+                </button>
+              </form>
+            )}
+            </div>
           </div>
         </div>
       </div>
@@ -971,9 +1125,15 @@ function TimelineDivider({ label, highlight }: { label: string; highlight: boole
   );
 }
 
-function getTimelineMeta(timestamp?: string) {
-  if (!timestamp) return null;
-  const parsed = parseMessageDate(timestamp);
+function getTimelineMeta(message: ChatMessageProps) {
+  const candidate =
+    message.occurredAt ||
+    (typeof message.metadata?.occurred_at === "string" ? message.metadata.occurred_at : undefined) ||
+    message.timestamp;
+  if (!candidate) {
+    return null;
+  }
+  const parsed = parseMessageDate(candidate);
   if (!parsed) return null;
   return { label: formatTimelineLabel(parsed), isToday: isToday(parsed) };
 }
@@ -1044,10 +1204,12 @@ async function streamTriageResponse({
   history,
 }: StreamParams) {
   if (!history.length) {
+    const now = new Date();
     updateMessage(aiMessageId, {
       content: "Maaf, saya belum menerima konteks percakapan. Silakan coba kirim ulang pertanyaannya.",
       isTyping: false,
-      timestamp: formatTriageTimestamp(new Date()),
+      timestamp: formatTriageTimestamp(now),
+      occurredAt: now.toISOString(),
     });
     return;
   }
@@ -1075,7 +1237,6 @@ async function streamTriageResponse({
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    const timestamp = formatTriageTimestamp(new Date());
     let aggregated = "";
     let isFirstChunk = true;
     let lastAppliedSummary = previousSummary;
@@ -1113,10 +1274,13 @@ async function streamTriageResponse({
       setSummary(parsedInsight);
     }
 
+    const completedAt = new Date();
+
     updateMessage(aiMessageId, {
       content: aggregated.trim(),
       isTyping: false,
-      timestamp,
+      timestamp: formatTriageTimestamp(completedAt),
+      occurredAt: completedAt.toISOString(),
       riskLevel: parsedInsight.riskLevel,
       redFlag: parsedInsight.redFlags[0],
     });
@@ -1145,11 +1309,13 @@ async function streamTriageResponse({
     // CTA untuk OTC ditampilkan di UI berdasarkan summary.recommendation.type === 'otc'
   } catch (error) {
     console.error("AI triage stream failed:", error);
+    const now = new Date();
     updateMessage(aiMessageId, {
       content:
         "Maaf, layanan AI sedang mengalami gangguan. Silakan coba lagi sebentar lagi atau lanjutkan ke konsultasi dokter.",
       isTyping: false,
-      timestamp: formatTriageTimestamp(new Date()),
+      timestamp: formatTriageTimestamp(now),
+      occurredAt: now.toISOString(),
     });
     setSummary((prev) => ({ ...prev, updatedAt: new Date().toISOString() }));
     setBanner((prev) => ({ ...prev, visible: false }));

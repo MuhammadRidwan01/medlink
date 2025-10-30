@@ -14,6 +14,7 @@ export type ChatMessageProps = {
   role: MessageAuthor;
   content: string;
   timestamp?: string;
+  occurredAt?: string;
   riskLevel?: RiskLevel;
   redFlag?: string;
   isTyping?: boolean;
