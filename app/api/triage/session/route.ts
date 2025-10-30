@@ -35,23 +35,23 @@ export async function GET(request: Request) {
   let sessionError: PostgrestError | null = null;
 
   if (requestedSessionId) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("triage_sessions")
       .select("id, status, summary, risk_level, created_at, updated_at")
       .eq("patient_id", user.id)
       .eq("id", requestedSessionId)
-      .maybeSingle<SessionRow>();
-    session = data;
+      .maybeSingle();
+    session = (data ?? null) as SessionRow | null;
     sessionError = error;
   } else {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("triage_sessions")
       .select("id, status, summary, risk_level, created_at, updated_at")
       .eq("patient_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
-      .maybeSingle<SessionRow>();
-    session = data;
+      .maybeSingle();
+    session = (data ?? null) as SessionRow | null;
     sessionError = error;
   }
 
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const { data: messages, error: msgError } = await (supabase as any)
+  const { data: messages, error: msgError } = await supabase
     .from("triage_messages")
     .select("id, role, content, created_at, metadata")
     .eq("session_id", session.id)

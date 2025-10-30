@@ -12,12 +12,13 @@ import {
 import type { ChatMessageProps } from "@/components/features/ai-triage/chat-message";
 
 type PatientTriagePageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     session?: string;
-  };
+  }>;
 };
 
-export default async function PatientTriagePage({ searchParams }: PatientTriagePageProps) {
+export default async function PatientTriagePage(props: PatientTriagePageProps) {
+  const searchParams = props.searchParams ? await props.searchParams : undefined;
   const supabase = await getSupabaseServerClient();
   const {
     data: { user },

@@ -298,7 +298,15 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
         setOtcBusy(false);
       }
     })();
-  }, [isHydrated, summary, patientContext, otcBusy, isStreaming, otcMessageAdded]);
+  }, [
+    isHydrated,
+    summary,
+    patientContext,
+    otcBusy,
+    isStreaming,
+    otcMessageAdded,
+    otcSuggestions.length,
+  ]);
 
   // Auto-complete session when AI gives final recommendation
   useEffect(() => {
@@ -373,7 +381,16 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
         }),
       }).catch((err) => console.error("Failed to save OTC message:", err));
     }
-  }, [isHydrated, sessionStatus, summary?.recommendation, otcSuggestions, otcMessageAdded, otcBusy, sessionId]);
+  }, [
+    isHydrated,
+    sessionStatus,
+    summary?.recommendation,
+    otcSuggestions,
+    otcSuggestions.length,
+    otcMessageAdded,
+    otcBusy,
+    sessionId,
+  ]);
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -654,6 +671,7 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
       setBanner,
       patientContext,
       sessionId,
+      scrollToBottom,
     ],
   );
 

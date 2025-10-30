@@ -124,7 +124,7 @@ export default function PatientLayout({ children }: { children: ReactNode }) {
                 onNavigate={() => setIsSidebarOpen(false)}
                 variant="floating"
               />
-              <main className="relative flex-1 px-4 pb-28 pt-6 md:px-0 md:pb-20 md:pt-8">
+              <main className="relative flex-1 px-4 pt-6 md:px-0  md:pt-8">
                 <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
                   {children}
                 </div>
