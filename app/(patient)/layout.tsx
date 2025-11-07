@@ -130,7 +130,7 @@ export default function PatientLayout({ children }: { children: ReactNode }) {
                 </div>
               </main>
             </div>
-            <BottomNav items={patientNav} />
+            {/* <BottomNav items={patientNav} /> */}
             <Fab href="/patient/triage" />
           </div>
         </div>

@@ -31,6 +31,7 @@ export function SymptomSummary({ summary, className, loading }: SymptomSummaryPr
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [changes, setChanges] = useState<ChangeMap>(INITIAL_CHANGE_STATE);
   const previousRef = useRef(summary);
+  const isEmergency = summary.riskLevel === "emergency" || summary.recommendation?.type === "emergency";
 
   useEffect(() => {
     if (!previousRef.current) {
@@ -51,7 +52,17 @@ export function SymptomSummary({ summary, className, loading }: SymptomSummaryPr
   }, [summary]);
 
   const summaryContent = (
-    <div className="card-surface space-y-4 p-5">
+    <div
+      className={[
+        "card-surface relative space-y-4 overflow-hidden p-5",
+        isEmergency
+          ? "border-danger/50 bg-gradient-to-br from-rose-950/60 via-card to-card shadow-[0_30px_80px_-35px_rgba(248,113,113,0.85)] ring-1 ring-danger/30"
+          : "",
+      ].join(" ")}
+    >
+      {isEmergency ? (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(248,113,113,0.15),transparent_60%)] pointer-events-none" aria-hidden />
+      ) : null}
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-small text-muted-foreground">Ringkasan Gejala</p>
@@ -61,6 +72,14 @@ export function SymptomSummary({ summary, className, loading }: SymptomSummaryPr
         </div>
         <RiskBadge level={summary.riskLevel} />
       </div>
+      {isEmergency ? (
+        <div className="rounded-card border border-danger/40 bg-danger/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-danger">
+          <span className="inline-flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Darurat — segera cari bantuan langsung.
+          </span>
+        </div>
+      ) : null}
       {summary.severity ? (
         <motion.section
           animate={changes.riskLevel ? { backgroundColor: "rgba(20,184,166,0.08)" } : { backgroundColor: "rgba(255,255,255,0)" }}
@@ -115,9 +134,16 @@ export function SymptomSummary({ summary, className, loading }: SymptomSummaryPr
           animate={{ opacity: 1 }}
           initial={{ opacity: 0.95 }}
           transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-          className="space-y-2 rounded-card border border-primary/30 bg-primary/5 p-3"
+          className={[
+            "space-y-2 rounded-card p-3",
+            summary.recommendation.type === "emergency"
+              ? "border border-danger/40 bg-danger/10 text-danger"
+              : "border border-primary/30 bg-primary/5 text-primary",
+          ].join(" ")}
         >
-          <header className="text-small font-semibold text-primary">Rekomendasi</header>
+          <header className="text-small font-semibold">
+            Rekomendasi {summary.recommendation.type === "emergency" ? "darurat" : ""}
+          </header>
           {summary.recommendation.type ? (
             <p className="text-small text-foreground">Tipe: {summary.recommendation.type}</p>
           ) : null}

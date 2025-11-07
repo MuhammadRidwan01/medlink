@@ -26,7 +26,8 @@ const riskConfig: Record<
   },
   emergency: {
     label: "Darurat",
-    container: "border border-danger/40 bg-danger text-white shadow-[0_0_0_1px_rgba(255,255,255,0.35)]",
+    container:
+      "border border-transparent bg-gradient-to-r from-rose-600 via-red-600 to-orange-500 text-white shadow-[0_15px_45px_-20px_rgba(248,113,113,0.9)] animate-pulse",
     indicator: "bg-white",
   },
 };

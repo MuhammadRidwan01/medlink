@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   Send,
   AlertTriangle,
@@ -12,6 +13,7 @@ import {
   Flame,
   BellRing,
   RefreshCw,
+  PhoneCall,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
@@ -146,6 +148,7 @@ type TimelineEntry =
 
 export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const router = useRouter();
+  const emergencyNumber = "119";
   const [sessionId, setSessionId] = useState<string | null>(initialSession?.id ?? null);
   const [sessionStatus, setSessionStatus] = useState<"active" | "completed">(
     initialSession?.status ?? "active",
@@ -189,6 +192,9 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   }>>([]);
   const otcAutoFetchedRef = useRef(false);
   const [otcMessageAdded, setOtcMessageAdded] = useState(false);
+  const [emergencyModalOpen, setEmergencyModalOpen] = useState(false);
+  const [emergencyAcknowledged, setEmergencyAcknowledged] = useState(false);
+  const emergencyNoticeSentRef = useRef(false);
 
   const quickReplies = useMemo(() => quickReplyPresets, []);
 
@@ -216,6 +222,40 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [isHydrated, sessionStatus, messages.length, isStreaming]);
+
+  useEffect(() => {
+    if (summary?.recommendation?.type === "emergency" && !emergencyAcknowledged) {
+      setEmergencyModalOpen(true);
+    }
+  }, [summary?.recommendation?.type, emergencyAcknowledged]);
+
+  const handleEmergencyModalChange = useCallback(
+    (open: boolean) => {
+      setEmergencyModalOpen(open);
+      if (!open) {
+        setEmergencyAcknowledged(true);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (summary?.recommendation?.type === "emergency" && !emergencyNoticeSentRef.current) {
+      const now = new Date();
+      const emergencyMessage: ChatMessageProps = {
+        id: `msg-emergency-directive-${Date.now()}`,
+        role: "ai",
+        content:
+          "Ini adalah keadaan darurat medis. Segera hentikan percakapan ini dan hubungi layanan gawat darurat 119 atau menuju IGD terdekat sekarang. Jangan menunggu jawaban lebih lanjut.",
+        timestamp: formatTriageTimestamp(now),
+        occurredAt: now.toISOString(),
+        riskLevel: "emergency",
+        redFlag: "AI mendeteksi kombinasi gejala berbahaya",
+      };
+      setMessages((prev) => [...prev, emergencyMessage]);
+      emergencyNoticeSentRef.current = true;
+    }
+  }, [summary?.recommendation?.type, setMessages]);
 
   const profile = useProfileStore((state) => state.profile);
   const allergies = useProfileStore((state) => state.allergies);
@@ -574,6 +614,9 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
         setOtcMessageAdded(false);
         setOtcBusy(false);
         otcAutoFetchedRef.current = false;
+        emergencyNoticeSentRef.current = false;
+        setEmergencyAcknowledged(false);
+        setEmergencyModalOpen(false);
         const now = new Date();
         setMessages([
           {
@@ -749,25 +792,26 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
   const summaryUpdatedLabel = useMemo(() => formatSummaryUpdated(summary.updatedAt), [summary.updatedAt]);
 
 const timelineEntries = useMemo(() => {
-    const entries: TimelineEntry[] = [];
-    let lastLabel: string | null = null;
-    for (const message of messages) {
-      const meta = getTimelineMeta(message);
-      if (meta && meta.label !== lastLabel) {
-        entries.push({
-          type: "divider",
-          id: `divider-${message.id}-${meta.label}`,
-          label: meta.label,
-          highlight: meta.isToday,
-        });
-        lastLabel = meta.label;
-      }
-      entries.push({ type: "message", message });
+  const entries: TimelineEntry[] = [];
+  let lastLabel: string | null = null;
+  for (const message of messages) {
+    const meta = getTimelineMeta(message);
+    if (meta && meta.label !== lastLabel) {
+      entries.push({
+        type: "divider",
+        id: `divider-${message.id}-${meta.label}`,
+        label: meta.label,
+        highlight: meta.isToday,
+      });
+      lastLabel = meta.label;
     }
-    return entries;
-  }, [messages]);
+    entries.push({ type: "message", message });
+  }
+  return entries;
+}, [messages]);
 
 return (
+  <>
   <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
     <div className="relative flex min-h-[70vh] flex-col rounded-card bg-card shadow-md">
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -1056,9 +1100,60 @@ return (
             </div>
           </motion.div>
         ) : null}
-      </div>
     </div>
-  );
+  </div>
+
+  <Dialog.Root open={emergencyModalOpen} onOpenChange={handleEmergencyModalChange}>
+    <Dialog.Portal>
+      <Dialog.Overlay asChild>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
+        />
+      </Dialog.Overlay>
+      <Dialog.Content asChild>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+          className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-danger/30 bg-card p-6 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-danger/10 text-danger">
+              <AlertTriangle className="h-7 w-7" aria-hidden="true" />
+            </div>
+            <Dialog.Title className="text-lg font-semibold text-foreground">
+              Kemungkinan Keadaan Darurat
+            </Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm text-muted-foreground">
+              AI mendeteksi tanda bahaya. Segera hubungi layanan gawat darurat atau tenaga medis terdekat.
+            </Dialog.Description>
+            <div className="mt-5 space-y-3">
+              <a
+                href={`tel:${emergencyNumber}`}
+                className="tap-target flex w-full items-center justify-center gap-2 rounded-button bg-danger px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:opacity-90"
+              >
+                <PhoneCall className="h-4 w-4" aria-hidden="true" />
+                Hubungi {emergencyNumber}
+              </a>
+              <button
+                type="button"
+                onClick={() => handleEmergencyModalChange(false)}
+                className="tap-target w-full rounded-button border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted/40"
+              >
+                Saya mengerti
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
+  </>
+);
 }
 
 type StreamParams = {
@@ -1414,6 +1509,7 @@ function AppointmentBubble({ summary, onClose }: { summary: TriageSummary; onClo
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [booking, setBooking] = useState(false);
+  const isEmergencyBooking = summary.recommendation?.type === "emergency";
 
   const handleBookAppointment = async () => {
     setBooking(true);
@@ -1424,18 +1520,39 @@ function AppointmentBubble({ summary, onClose }: { summary: TriageSummary; onClo
   };
 
   return (
-    <div className="space-y-3 rounded-xl border-2 border-warning/30 bg-gradient-to-br from-warning/5 to-background p-4 shadow-lg">
+    <div
+      className={
+        isEmergencyBooking
+          ? "space-y-3 rounded-xl border-2 border-danger/50 bg-gradient-to-br from-danger/20 via-background to-background p-4 shadow-[0_25px_60px_-35px_rgba(248,113,113,0.9)]"
+          : "space-y-3 rounded-xl border-2 border-warning/30 bg-gradient-to-br from-warning/5 to-background p-4 shadow-lg"
+      }
+    >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning/20">
-            <svg className="h-5 w-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div
+            className={
+              isEmergencyBooking
+                ? "flex h-8 w-8 items-center justify-center rounded-full bg-danger/20"
+                : "flex h-8 w-8 items-center justify-center rounded-full bg-warning/20"
+            }
+          >
+            <svg
+              className={isEmergencyBooking ? "h-5 w-5 text-danger" : "h-5 w-5 text-warning"}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
           <div>
-            <div className="text-sm font-bold text-foreground">Buat Appointment</div>
+            <div className="text-sm font-bold text-foreground">
+              {isEmergencyBooking ? "Hubungi Dokter / IGD" : "Buat Appointment"}
+            </div>
             <div className="text-xs text-muted-foreground">
-              {summary.recommendation?.type === "emergency" ? "Segera konsultasi dengan dokter" : "Disarankan konsultasi dokter"}
+              {summary.recommendation?.type === "emergency"
+                ? "Segera konsultasi langsung atau menuju IGD"
+                : "Disarankan konsultasi dokter"}
             </div>
           </div>
         </div>
@@ -1492,7 +1609,11 @@ function AppointmentBubble({ summary, onClose }: { summary: TriageSummary; onClo
         <button
           onClick={handleBookAppointment}
           disabled={!selectedDoctor || !selectedDate || !selectedTime || booking}
-          className="tap-target flex w-full items-center justify-center gap-2 rounded-lg bg-warning px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg disabled:opacity-60"
+          className={
+            isEmergencyBooking
+              ? "tap-target flex w-full items-center justify-center gap-2 rounded-lg bg-danger px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg disabled:opacity-60"
+              : "tap-target flex w-full items-center justify-center gap-2 rounded-lg bg-warning px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg disabled:opacity-60"
+          }
         >
           {booking ? (
             <>
