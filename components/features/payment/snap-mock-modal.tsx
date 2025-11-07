@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
+import qrisImage from "@/app/qris.png";
 import type { PaymentChannel } from "./mock-data";
 import type { PaymentOrder, PaymentStatus } from "./store";
 import { PaymentStatusIndicator } from "./payment-status-indicator";
@@ -139,10 +140,10 @@ export function SnapMockModal({
             <div className="flex flex-col items-center gap-3 rounded-card border border-primary/30 bg-card p-4">
               <div className="relative h-44 w-44 overflow-hidden rounded-card border border-border/70 bg-muted">
                 <Image
-                  src="https://images.unsplash.com/photo-1612810806695-d6d0a1fab3fb?auto=format&fit=crop&w=320&q=80"
+                  src={qrisImage}
                   alt="QR kode mock"
                   fill
-                  className="object-cover"
+                  className="object-contain bg-white"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
