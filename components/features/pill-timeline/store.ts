@@ -208,10 +208,6 @@ function sortDoses(doses: DoseEntry[]) {
   });
 }
 
-export function selectPrescription(prescriptionId: string) {
-  return (state: PillTimelineState) => state.prescriptions.find((prescription) => prescription.id === prescriptionId);
-}
-
 export function computeAdherence(prescription: Prescription) {
   const total = prescription.doses.length;
   const taken = prescription.doses.filter((dose) => dose.status === "taken").length;

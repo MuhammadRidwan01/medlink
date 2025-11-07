@@ -9,34 +9,54 @@ import { cn } from "@/lib/utils";
 type Unit = "metric" | "imperial";
 
 type VitalsCardProps = {
-  initialHeightCm: number;
-  initialWeightKg: number;
+  initialHeightCm?: number | null;
+  initialWeightKg?: number | null;
   loading?: boolean;
+};
+
+const formatValue = (value: number) => {
+  if (Number.isInteger(value)) return value.toString();
+  return value.toFixed(1).replace(/\.0$/, "");
 };
 
 export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: VitalsCardProps) {
   const [unit, setUnit] = useState<Unit>("metric");
   const [isEditing, setIsEditing] = useState(false);
-  const [heightCm, setHeightCm] = useState(initialHeightCm);
-  const [weightKg, setWeightKg] = useState(initialWeightKg);
+  const [heightCm, setHeightCm] = useState<number | null>(initialHeightCm ?? null);
+  const [weightKg, setWeightKg] = useState<number | null>(initialWeightKg ?? null);
   const updateProfile = useProfileStore((s) => s.updateProfile);
   const storeLoading = useProfileStore((s) => s.loading);
 
   useEffect(() => {
-    setHeightCm(initialHeightCm);
-    setWeightKg(initialWeightKg);
+    setHeightCm(initialHeightCm ?? null);
+    setWeightKg(initialWeightKg ?? null);
   }, [initialHeightCm, initialWeightKg]);
 
   const bmi = useMemo(() => {
     if (!heightCm || !weightKg) return "—";
-    const bmiValue = weightKg / (Math.pow(heightCm / 100, 2) || 1);
-    return bmiValue ? bmiValue.toFixed(1) : "—";
+    const denominator = Math.pow(heightCm / 100, 2);
+    if (!denominator) return "—";
+    const bmiValue = weightKg / denominator;
+    return Number.isFinite(bmiValue) ? bmiValue.toFixed(1) : "—";
   }, [heightCm, weightKg]);
 
-  const displayHeight =
-    unit === "metric" ? `${heightCm} cm` : `${(heightCm / 2.54).toFixed(1)} in`;
-  const displayWeight =
-    unit === "metric" ? `${weightKg} kg` : `${(weightKg * 2.20462).toFixed(1)} lb`;
+  const displayHeight = useMemo(() => {
+    if (heightCm == null) return "Belum diisi";
+    if (unit === "metric") {
+      return `${formatValue(heightCm)} cm`;
+    }
+    const inches = heightCm / 2.54;
+    return `${formatValue(inches)} in`;
+  }, [heightCm, unit]);
+
+  const displayWeight = useMemo(() => {
+    if (weightKg == null) return "Belum diisi";
+    if (unit === "metric") {
+      return `${formatValue(weightKg)} kg`;
+    }
+    const pounds = weightKg * 2.20462;
+    return `${formatValue(pounds)} lb`;
+  }, [unit, weightKg]);
 
   if (loading || storeLoading) {
     return (
@@ -50,6 +70,8 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
       </section>
     );
   }
+
+  const hasVitals = heightCm != null && weightKg != null;
 
   return (
     <motion.section
@@ -105,7 +127,10 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
             onSubmit={async (event) => {
               event.preventDefault();
               try {
-                await updateProfile({ heightCm, weightKg });
+                await updateProfile({
+                  heightCm: heightCm ?? null,
+                  weightKg: weightKg ?? null,
+                });
               } finally {
                 setIsEditing(false);
               }
@@ -119,11 +144,15 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
                   <input
                     type="number"
                     className="w-full bg-transparent text-sm outline-none"
-                    value={heightCm}
+                    value={heightCm ?? ""}
                     min={50}
                     max={230}
                     step={0.5}
-                    onChange={(event) => setHeightCm(Number.parseFloat(event.target.value))}
+                    onChange={(event) => {
+                      const nextValue = Number.parseFloat(event.target.value);
+                      setHeightCm(Number.isFinite(nextValue) ? nextValue : null);
+                    }}
+                    placeholder="Isi tinggi cm"
                   />
                 </div>
               </label>
@@ -134,11 +163,15 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
                   <input
                     type="number"
                     className="w-full bg-transparent text-sm outline-none"
-                    value={weightKg}
+                    value={weightKg ?? ""}
                     min={30}
                     max={200}
                     step={0.5}
-                    onChange={(event) => setWeightKg(Number.parseFloat(event.target.value))}
+                    onChange={(event) => {
+                      const nextValue = Number.parseFloat(event.target.value);
+                      setWeightKg(Number.isFinite(nextValue) ? nextValue : null);
+                    }}
+                    placeholder="Isi berat kg"
                   />
                 </div>
               </label>
@@ -184,9 +217,14 @@ export function VitalsCard({ initialHeightCm, initialWeightKg, loading }: Vitals
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="interactive tap-target mt-3 inline-flex items-center justify-center rounded-button border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className={cn(
+                "interactive tap-target mt-3 inline-flex items-center justify-center rounded-button px-4 py-2 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                hasVitals
+                  ? "border border-primary/30 bg-primary/10 text-primary"
+                  : "border border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/60",
+              )}
             >
-              Ubah tinggi & berat
+              {hasVitals ? "Ubah tinggi & berat" : "Isi tinggi & berat"}
             </button>
           </motion.div>
         )}

@@ -60,6 +60,7 @@ export default async function PatientTriagePage(props: PatientTriagePageProps) {
       .from("triage_sessions")
       .select("id, summary, status, updated_at")
       .eq("patient_id", user.id)
+      .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle<SessionRow>();

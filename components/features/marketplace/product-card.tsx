@@ -11,6 +11,7 @@ import { InteractionHint } from "@/components/features/marketplace/interaction-h
 import { InventoryBadge } from "@/components/features/marketplace/inventory-badge";
 import { RatingStars } from "@/components/features/marketplace/rating-stars";
 import { useMarketplaceCart, useMarketplaceSafety } from "@/components/features/marketplace/store";
+import { DRUG_IMAGE_SRC } from "@/lib/product-image";
 
 type ProductCardProps = {
   product: MarketplaceProduct;
@@ -48,7 +49,7 @@ export function ProductCard({ product, priority }: ProductCardProps) {
       >
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-card bg-muted">
           <Image
-            src={product.imageUrl}
+            src={DRUG_IMAGE_SRC}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"

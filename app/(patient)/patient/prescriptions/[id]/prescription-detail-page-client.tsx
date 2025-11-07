@@ -17,7 +17,6 @@ import {
   buildTimelineSegments,
   computeAdherence,
   computeNextDose,
-  selectPrescription,
   usePillTimelineStore,
 } from "@/components/features/pill-timeline/store";
 import { useToast } from "@/components/ui/use-toast";
@@ -31,17 +30,17 @@ export function PrescriptionDetailPageClient({
 }: PrescriptionDetailPageClientProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const prescription = usePillTimelineStore(
-    selectPrescription(prescriptionId),
-  );
-  const markCurrentDose = usePillTimelineStore(
-    (state) => state.markCurrentDose,
-  );
-  const snoozeCurrentDose = usePillTimelineStore(
-    (state) => state.snoozeCurrentDose,
-  );
-  const updateReminder = usePillTimelineStore(
-    (state) => state.updateReminder,
+  const { prescriptions, markCurrentDose, snoozeCurrentDose, updateReminder } =
+    usePillTimelineStore((state) => ({
+      prescriptions: state.prescriptions,
+      markCurrentDose: state.markCurrentDose,
+      snoozeCurrentDose: state.snoozeCurrentDose,
+      updateReminder: state.updateReminder,
+    }));
+
+  const prescription = useMemo(
+    () => prescriptions.find((item) => item.id === prescriptionId),
+    [prescriptions, prescriptionId],
   );
   const [isReminderOpen, setIsReminderOpen] = useState(false);
 

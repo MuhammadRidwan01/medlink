@@ -132,8 +132,8 @@ export default function PatientProfilePage() {
           <SnapshotBar />
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <VitalsCard
-              initialHeightCm={profile?.heightCm ?? 170}
-              initialWeightKg={profile?.weightKg ?? 65}
+              initialHeightCm={profile?.heightCm ?? null}
+              initialWeightKg={profile?.weightKg ?? null}
               loading={isLoading}
             />
             <ProfileForm loading={isLoading} />

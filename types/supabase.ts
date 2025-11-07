@@ -951,6 +951,10 @@ export type Database = {
         }
       }
       is_doctor: { Args: never; Returns: boolean }
+      process_payment_webhook: {
+        Args: { in_order_id: string; in_outcome: string }
+        Returns: Json
+      }
       remove_from_cart: { Args: { p_product_id: string }; Returns: undefined }
       update_cart_item: {
         Args: { p_product_id: string; p_qty: number }

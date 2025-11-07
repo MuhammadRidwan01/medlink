@@ -1,3 +1,5 @@
+import { DRUG_IMAGE_SRC } from "@/lib/product-image";
+
 export type CheckoutItem = {
   id: string;
   productId?: string;
@@ -40,8 +42,7 @@ export const MOCK_CHECKOUT_ITEMS: CheckoutItem[] = [
     detail: "10 tablet • Generik",
     quantity: 1,
     price: 95000,
-    imageUrl:
-      "https://images.unsplash.com/photo-1580281657521-6f48c6f0d441?auto=format&fit=crop&w=400&q=80",
+    imageUrl: DRUG_IMAGE_SRC,
   },
   {
     id: "otc-cough",
@@ -51,8 +52,7 @@ export const MOCK_CHECKOUT_ITEMS: CheckoutItem[] = [
     detail: "Botol 100 mL",
     quantity: 2,
     price: 38000,
-    imageUrl:
-      "https://images.unsplash.com/photo-1615485290382-43c8d2d82776?auto=format&fit=crop&w=400&q=80",
+    imageUrl: DRUG_IMAGE_SRC,
   },
   {
     id: "device-thermometer",
@@ -62,8 +62,7 @@ export const MOCK_CHECKOUT_ITEMS: CheckoutItem[] = [
     detail: "Akurasi ±0.1°C",
     quantity: 1,
     price: 125000,
-    imageUrl:
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=400&q=80",
+    imageUrl: DRUG_IMAGE_SRC,
   },
 ];
 

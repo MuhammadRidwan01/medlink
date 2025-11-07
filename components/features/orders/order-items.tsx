@@ -4,6 +4,7 @@ import Image from "next/image";
 import { PackageSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
+import { DRUG_IMAGE_SRC } from "@/lib/product-image";
 import type { OrderItem } from "./data";
 
 type OrderItemsProps = {
@@ -31,7 +32,7 @@ export function OrderItems({ items, className }: OrderItemsProps) {
           >
             <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-card bg-muted">
               <Image
-                src={item.imageUrl}
+                src={DRUG_IMAGE_SRC}
                 alt={item.name}
                 fill
                 sizes="64px"

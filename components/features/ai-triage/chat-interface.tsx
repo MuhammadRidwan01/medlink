@@ -145,6 +145,7 @@ type TimelineEntry =
   | { type: "message"; message: ChatMessageProps };
 
 export function ChatInterface({ initialSession }: ChatInterfaceProps) {
+  const router = useRouter();
   const [sessionId, setSessionId] = useState<string | null>(initialSession?.id ?? null);
   const [sessionStatus, setSessionStatus] = useState<"active" | "completed">(
     initialSession?.status ?? "active",
@@ -315,6 +316,10 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
     // Auto-complete after recommendation is given
     const timer = setTimeout(() => {
       setSessionStatus("completed");
+      setShowFinalPanel(true);
+      void fetch("/api/triage/session/complete", { method: "POST" }).catch((error) => {
+        console.error("Failed to mark triage session complete:", error);
+      });
       
       // For doctor/appointment/emergency, add appointment form
       if (summary.recommendation?.type === "doctor" || 
@@ -488,7 +493,7 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
 
         const hydratedSummary = coerceTriageSummary(
           data.session.summary,
-          initialSession?.summary ?? createEmptyTriageSummary(),
+          createEmptyTriageSummary(),
         );
         if (data.session.updated_at) {
           hydratedSummary.updatedAt = data.session.updated_at;
@@ -581,11 +586,12 @@ export function ChatInterface({ initialSession }: ChatInterfaceProps) {
           },
         ]);
         scrollToBottom("auto");
+        router.replace(`/patient/triage?session=${data.session.id}`);
       }
     } finally {
       setSessionBusy(false);
     }
-  }, [sessionBusy, scrollToBottom]);
+  }, [sessionBusy, scrollToBottom, router]);
 
   const addMessage = useCallback((message: ChatMessageProps) => {
     setMessages((prev) => [...prev, message]);
@@ -1517,7 +1523,7 @@ function AddToCartButton({ suggestions }: { suggestions: Array<{ name: string; c
       return;
     }
     setIsSubmitting(true);
-    const { added, failed } = await addSuggestions(suggestions, { syncCheckout: true });
+    const { added, failed } = await addSuggestions(suggestions, { syncCheckout: true, replaceCart: true });
     setIsSubmitting(false);
     if (failed.length) {
       console.warn("[triage] produk tidak ditemukan:", failed);

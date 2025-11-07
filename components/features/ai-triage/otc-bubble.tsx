@@ -32,7 +32,10 @@ export function OTCBubble({ suggestions, timestamp }: OTCBubbleProps) {
       return;
     }
     setIsSubmitting(true);
-    const { added, failed } = await addSuggestions(suggestions, { syncCheckout: true });
+    const { added, failed } = await addSuggestions(suggestions, {
+      syncCheckout: true,
+      replaceCart: true,
+    });
     setIsSubmitting(false);
     if (failed.length) {
       console.warn("[triage] produk OTC tidak ditemukan:", failed);

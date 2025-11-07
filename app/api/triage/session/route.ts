@@ -48,6 +48,7 @@ export async function GET(request: Request) {
       .from("triage_sessions")
       .select("id, status, summary, risk_level, created_at, updated_at")
       .eq("patient_id", user.id)
+      .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

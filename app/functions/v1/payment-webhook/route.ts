@@ -61,42 +61,40 @@ export async function POST(request: Request) {
   const supabase = createClient<Database>(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const from = (table: string) => (supabase.from as any)(table);
 
-  const { data: paymentRow, error: paymentFetchError } = await from("commerce.payments")
-    .select("id, order_id")
-    .eq("order_id", orderId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data: rpcResult, error: rpcError } = await supabase.rpc("process_payment_webhook", {
+    in_order_id: orderId,
+    in_outcome: outcome,
+  });
 
-  if (paymentFetchError) {
-    console.error("[payment-webhook] fetch payment error", paymentFetchError);
-    return jsonResponse({ error: "Failed to fetch payment." }, { status: 500 });
-  }
+  if (rpcError) {
+    console.error("[payment-webhook] process error", rpcError);
 
-  if (!paymentRow) {
-    return jsonResponse({ error: "Payment not found." }, { status: 404 });
-  }
-
-  const { error: updatePaymentError } = await from("commerce.payments")
-    .update({ status: outcome })
-    .eq("id", paymentRow.id);
-
-  if (updatePaymentError) {
-    console.error("[payment-webhook] update payment error", updatePaymentError);
-    return jsonResponse({ error: "Failed to update payment." }, { status: 500 });
-  }
-
-  if (outcome === "success") {
-    const { error: updateOrderError } = await from("commerce.orders")
-      .update({ status: "paid" })
-      .eq("id", orderId);
-
-    if (updateOrderError) {
-      console.error("[payment-webhook] update order error", updateOrderError);
-      return jsonResponse({ error: "Failed to update order." }, { status: 500 });
+    if (rpcError.message === "payment_not_found") {
+      return jsonResponse({ error: "Payment not found." }, { status: 404 });
     }
+
+    if (rpcError.message === "invalid_input" || rpcError.message === "invalid_outcome") {
+      return jsonResponse({ error: "Invalid payload." }, { status: 400 });
+    }
+
+    return jsonResponse({ error: "Failed to process payment." }, { status: 500 });
+  }
+
+  if (!rpcResult) {
+    console.error("[payment-webhook] process payment error: empty result");
+    return jsonResponse({ error: "Failed to process payment." }, { status: 500 });
+  }
+
+  const { payment_id: paymentId, status: persistedStatus } = rpcResult as {
+    payment_id?: string;
+    order_id?: string;
+    status?: string;
+  };
+
+  if (!paymentId || !persistedStatus) {
+    console.error("[payment-webhook] invalid RPC payload", rpcResult);
+    return jsonResponse({ error: "Failed to process payment." }, { status: 500 });
   }
 
   try {
@@ -109,8 +107,8 @@ export async function POST(request: Request) {
       event: "status",
       payload: {
         orderId,
-        paymentId: paymentRow.id,
-        status: outcome,
+        paymentId,
+        status: persistedStatus,
         timestamp: new Date().toISOString(),
       },
     });
@@ -123,7 +121,7 @@ export async function POST(request: Request) {
   return jsonResponse({
     ok: true,
     orderId,
-    paymentId: paymentRow.id,
-    status: outcome,
+    paymentId,
+    status: persistedStatus,
   });
 }

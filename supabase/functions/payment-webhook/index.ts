@@ -48,43 +48,39 @@ serve(async (req) => {
     },
   });
 
-  const { data: paymentRow, error: fetchError } = await supabase
-    .from("commerce.payments")
-    .select("id, order_id")
-    .eq("order_id", orderId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data: rpcResult, error: rpcError } = await supabase.rpc("process_payment_webhook", {
+    in_order_id: orderId,
+    in_outcome: outcome,
+  });
 
-  if (fetchError) {
-    console.error("fetch payment error", fetchError);
-    return new Response("Failed to fetch payment", { status: 500, headers: corsHeaders });
-  }
+  if (rpcError) {
+    console.error("process payment error", rpcError);
 
-  if (!paymentRow) {
-    return new Response("Payment not found", { status: 404, headers: corsHeaders });
-  }
-
-  const { error: paymentUpdateError } = await supabase
-    .from("commerce.payments")
-    .update({ status: outcome })
-    .eq("id", paymentRow.id);
-
-  if (paymentUpdateError) {
-    console.error("update payment error", paymentUpdateError);
-    return new Response("Failed to update payment", { status: 500, headers: corsHeaders });
-  }
-
-  if (outcome === "success") {
-    const { error: orderUpdateError } = await supabase
-      .from("commerce.orders")
-      .update({ status: "paid" })
-      .eq("id", orderId);
-
-    if (orderUpdateError) {
-      console.error("update order error", orderUpdateError);
-      return new Response("Failed to update order", { status: 500, headers: corsHeaders });
+    if (rpcError.message === "payment_not_found") {
+      return new Response("Payment not found", { status: 404, headers: corsHeaders });
     }
+
+    if (rpcError.message === "invalid_input" || rpcError.message === "invalid_outcome") {
+      return new Response("Invalid payload", { status: 400, headers: corsHeaders });
+    }
+
+    return new Response("Failed to process payment", { status: 500, headers: corsHeaders });
+  }
+
+  if (!rpcResult) {
+    console.error("process payment error: empty result");
+    return new Response("Failed to process payment", { status: 500, headers: corsHeaders });
+  }
+
+  const { payment_id: paymentId, status: persistedStatus } = rpcResult as {
+    payment_id?: string;
+    order_id?: string;
+    status?: string;
+  };
+
+  if (!paymentId || !persistedStatus) {
+    console.error("process payment error: invalid payload", rpcResult);
+    return new Response("Failed to process payment", { status: 500, headers: corsHeaders });
   }
 
   const channel = supabase.channel("payment:update", {
@@ -96,22 +92,22 @@ serve(async (req) => {
   await channel.subscribe();
   await channel.send({
     type: "broadcast",
-    event: "status",
-    payload: {
-      orderId,
-      paymentId: paymentRow.id,
-      status: outcome,
-      timestamp: new Date().toISOString(),
-    },
-  });
+      event: "status",
+      payload: {
+        orderId,
+        paymentId,
+        status: persistedStatus,
+        timestamp: new Date().toISOString(),
+      },
+    });
   await channel.unsubscribe();
 
   return new Response(
     JSON.stringify({
       ok: true,
       orderId,
-      paymentId: paymentRow.id,
-      status: outcome,
+      paymentId,
+      status: persistedStatus,
     }),
     {
       headers: {

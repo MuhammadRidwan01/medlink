@@ -2,7 +2,15 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Toast, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "./toast";
+import { X } from "lucide-react";
+import {
+  Toast,
+  ToastClose,
+  ToastDescription,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
+} from "./toast";
 
 type ToastVariant = "default" | "destructive";
 
@@ -71,6 +79,10 @@ export function ToastProviderContext({ children }: { children: ReactNode }) {
             {toastItem.description ? (
               <ToastDescription>{toastItem.description}</ToastDescription>
             ) : null}
+            <ToastClose aria-label="Tutup notifikasi">
+              <X className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Tutup notifikasi</span>
+            </ToastClose>
           </Toast>
         ))}
       </ToastProvider>

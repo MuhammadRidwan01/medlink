@@ -10,6 +10,7 @@ import { usePaymentStore } from "@/components/features/payment/store";
 import { InteractionHint } from "@/components/features/marketplace/interaction-hint";
 import { useMarketplaceCart, useMarketplaceSafety } from "@/components/features/marketplace/store";
 import { cn } from "@/lib/utils";
+import { DRUG_IMAGE_SRC } from "@/lib/product-image";
 
 export function CartSheet() {
   const standardEase = cubicBezier(0.2, 0.8, 0.2, 1);
@@ -64,7 +65,7 @@ export function CartSheet() {
               <article key={item.product.id} className="flex gap-3 rounded-card border border-border/60 bg-muted/20 p-3">
                 <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-card bg-muted">
                   <Image
-                    src={item.product.imageUrl}
+                    src={DRUG_IMAGE_SRC}
                     alt={item.product.name}
                     fill
                     sizes="80px"
@@ -142,7 +143,7 @@ export function CartSheet() {
                   detail: it.product.shortDescription,
                   quantity: it.quantity,
                   price: it.product.price,
-                  imageUrl: it.product.imageUrl,
+                  imageUrl: DRUG_IMAGE_SRC,
                 }));
                 setCheckoutItems(mapped);
                 toggle(false);

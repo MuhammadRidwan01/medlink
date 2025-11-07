@@ -13,6 +13,7 @@ import { CartSheet } from "@/components/features/marketplace/cart/cart-sheet";
 import { CartTrigger } from "@/components/features/marketplace/cart/cart-trigger";
 import type { MarketplaceProduct } from "@/components/features/marketplace/data";
 import { useMarketplaceCart, useMarketplaceSafety } from "@/components/features/marketplace/store";
+import { DRUG_IMAGE_SRC } from "@/lib/product-image";
 
 type ProductDetailPageClientProps = {
   slug: string;
@@ -111,7 +112,7 @@ export function ProductDetailPageClient({
         <div className="card-surface space-y-4 p-4">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-card bg-muted">
             <Image
-              src={product.imageUrl}
+              src={DRUG_IMAGE_SRC}
               alt={product.name}
               fill
               sizes="(max-width: 1024px) 100vw, 60vw"
@@ -186,7 +187,7 @@ export function ProductDetailPageClient({
               >
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
                   <Image
-                    src={related.imageUrl}
+                    src={DRUG_IMAGE_SRC}
                     alt={related.name}
                     fill
                     sizes="(max-width: 768px) 100vw, 25vw"

@@ -6,6 +6,7 @@ import { PackageCheck, Shield } from "lucide-react";
 import { InteractionHint } from "@/components/features/marketplace/interaction-hint";
 import { useMarketplaceSafety } from "@/components/features/marketplace/store";
 import { formatCurrency } from "@/lib/format";
+import { DRUG_IMAGE_SRC } from "@/lib/product-image";
 import type { CheckoutItem, DeliveryOption } from "./mock-data";
 
 type OrderSummaryProps = {
@@ -61,7 +62,7 @@ export function OrderSummary({
             >
               <div className="relative h-16 w-16 overflow-hidden rounded-card bg-muted">
                 <Image
-                  src={item.imageUrl}
+                  src={DRUG_IMAGE_SRC}
                   alt={item.name}
                   fill
                   sizes="64px"
