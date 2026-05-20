@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ['nodejs_20'] 
+nixPkgs = ['nodejs_22'] # (Atau nodejs_20, sesuaikan dengan yang kamu pilih sebelumnya)
 
 [phases.install]
 cmds = [
@@ -9,3 +9,7 @@ cmds = [
 
 [phases.build]
 cmds = ['npx pnpm run build']
+
+# Tambahkan bagian ini untuk menghentikan Nixpacks menggunakan 'deno'
+[start]
+cmd = 'npx pnpm start'
