@@ -1,8 +1,13 @@
 [phases.setup]
-nixPkgs = ['nodejs', 'pnpm']
+# Hanya minta Nixpacks menginstal Node.js (Anda bisa ganti ke nodejs_18 atau nodejs_22 jika perlu)
+nixPkgs = ['nodejs_20'] 
 
 [phases.install]
-cmds = ['pnpm install']
+# Instal pnpm secara global menggunakan npm, lalu jalankan pnpm install
+cmds = [
+    'npm install -g pnpm',
+    'pnpm install'
+]
 
 [phases.build]
 cmds = ['pnpm run build']
