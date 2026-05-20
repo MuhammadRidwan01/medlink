@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ['nodejs_22'] # (Atau nodejs_20, sesuaikan dengan yang kamu pilih sebelumnya)
+nixPkgs = ['nodejs_20'] # (Atau nodejs_20, sesuaikan dengan yang kamu pilih sebelumnya)
 
 [phases.install]
 cmds = [
