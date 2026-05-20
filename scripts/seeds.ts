@@ -30,9 +30,11 @@ function upsertEnvLocal(next: Record<string, string>) {
     const m = line.match(/^([A-Za-z0-9_]+)=(.*)$/);
     if (m) map.set(m[1], m[2]);
   });
-  // set provided
+  // set provided only if not already present, or if process.env explicitly had a value
   for (const [k, v] of Object.entries(next)) {
-    map.set(k, v);
+    if (!map.has(k)) {
+      map.set(k, v);
+    }
   }
   const out = Array.from(map.entries())
     .map(([k, v]) => `${k}=${v}`)

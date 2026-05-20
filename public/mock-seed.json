@@ -1,0 +1,226 @@
+{
+  "localStorage": {
+    "ml-content-store-v1": {
+      "articles": [
+        {
+          "id": "seed-a1",
+          "slug": "hipertensi-harian",
+          "title": "Manajemen Hipertensi Harian",
+          "excerpt": "Pola hidup dan obat yang tepat.",
+          "content": "# Hipertensi\n\n- Kurangi garam\n- Olahraga rutin",
+          "author": "Dr. Meida",
+          "authorRole": "Internist",
+          "category": "Kardiologi",
+          "tags": [
+            "hipertensi",
+            "diet"
+          ],
+          "status": "published",
+          "coverUrl": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
+          "readMinutes": 5,
+          "createdAt": "2026-05-20T06:43:58.438Z",
+          "publishedAt": "2026-05-20T06:43:58.438Z"
+        },
+        {
+          "id": "seed-a2",
+          "slug": "asma-dan-penanganan",
+          "title": "Asma: Tanda dan Penanganan",
+          "excerpt": "Kenali pemicu dan teknik inhaler.",
+          "content": "# Asma\n\nPemicu umum dan perawatan.",
+          "author": "Dr. Rina",
+          "authorRole": "Pulmonolog",
+          "category": "Pulmonologi",
+          "tags": [
+            "asma",
+            "inhaler"
+          ],
+          "status": "scheduled",
+          "coverUrl": "https://images.unsplash.com/photo-1585436148261-8d9d0d9457c8?auto=format&fit=crop&w=1200&q=80",
+          "readMinutes": 4,
+          "createdAt": "2026-05-20T06:43:58.438Z",
+          "scheduledAt": "2026-05-21T06:43:58.438Z"
+        }
+      ]
+    },
+    "ml-schedule-store-v1": {
+      "slots": [
+        {
+          "id": "2026-05-20-09:00",
+          "date": "2026-05-20",
+          "time": "09:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-20-10:00",
+          "date": "2026-05-20",
+          "time": "10:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-20-11:00",
+          "date": "2026-05-20",
+          "time": "11:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-21-09:00",
+          "date": "2026-05-21",
+          "time": "09:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-21-10:00",
+          "date": "2026-05-21",
+          "time": "10:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-21-11:00",
+          "date": "2026-05-21",
+          "time": "11:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-22-09:00",
+          "date": "2026-05-22",
+          "time": "09:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-22-10:00",
+          "date": "2026-05-22",
+          "time": "10:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-22-11:00",
+          "date": "2026-05-22",
+          "time": "11:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-23-09:00",
+          "date": "2026-05-23",
+          "time": "09:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-23-10:00",
+          "date": "2026-05-23",
+          "time": "10:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-23-11:00",
+          "date": "2026-05-23",
+          "time": "11:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-24-09:00",
+          "date": "2026-05-24",
+          "time": "09:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-24-10:00",
+          "date": "2026-05-24",
+          "time": "10:00",
+          "status": "open"
+        },
+        {
+          "id": "2026-05-24-11:00",
+          "date": "2026-05-24",
+          "time": "11:00",
+          "status": "open"
+        }
+      ],
+      "appointments": [
+        {
+          "id": "apt-seed-1",
+          "consultId": "CONS-1001",
+          "patient": "Budi",
+          "reason": "Kontrol DM",
+          "date": "2026-05-21",
+          "time": "09:00",
+          "status": "scheduled"
+        }
+      ]
+    },
+    "ml-feedback-state-v1": {
+      "entries": [
+        {
+          "id": "fb-seed-1",
+          "kind": "consultation",
+          "rating": 4.5,
+          "tags": [
+            "ramah",
+            "jelas"
+          ],
+          "comment": "Dokter sangat informatif.",
+          "createdAt": "2026-05-20T06:43:58.438Z",
+          "contactOk": true,
+          "testimonialOk": false
+        }
+      ]
+    }
+  },
+  "sessionStorage": {
+    "payment-store": {
+      "state": {
+        "orders": {
+          "INV-SEED-1": {
+            "id": "INV-SEED-1",
+            "items": [
+              {
+                "id": "ci-1",
+                "name": "Azithromycin 500 mg",
+                "detail": "10 tablet",
+                "imageUrl": "",
+                "quantity": 1,
+                "price": 95000
+              }
+            ],
+            "addressId": "addr-1",
+            "deliveryOptionId": "standard",
+            "contact": {
+              "name": "Budi",
+              "email": "budi@example.com",
+              "phone": "+62 812-0000-0000"
+            },
+            "notes": "",
+            "subtotal": 95000,
+            "shipping": 8000,
+            "discount": 12000,
+            "total": 91000,
+            "status": "pending",
+            "paymentChannel": "virtual_account",
+            "createdAt": "2026-05-20T06:43:58.438Z",
+            "lastStatusUpdate": "2026-05-20T06:43:58.438Z",
+            "hasRetried": false
+          }
+        },
+        "activeOrderId": "INV-SEED-1",
+        "developerOutcome": "success"
+      },
+      "version": 0
+    }
+  },
+  "users": [
+    {
+      "role": "admin",
+      "email": "admin@demo.local",
+      "password": "admin123"
+    },
+    {
+      "role": "doctor",
+      "email": "doctor@demo.local",
+      "password": "doctor123"
+    },
+    {
+      "role": "patient",
+      "email": "patient@demo.local",
+      "password": "patient123"
+    }
+  ]
+}
